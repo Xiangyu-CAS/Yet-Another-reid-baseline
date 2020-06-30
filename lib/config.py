@@ -11,7 +11,16 @@ _C.MODEL.PRETRAIN_CHOICE = 'imagenet'
 
 #----------------------------SOLVER-----------------------------------
 _C.SOLVER = CN()
-_C.SOLVER.MAX_EPOCHS = 50
-_C.SOLVER.BASE_LR = 3e-4
+_C.SOLVER.MAX_EPOCHS = 20
+_C.SOLVER.BASE_LR = 3.5e-4
 
 _C.SOLVER.FREEZE_BASE_EPOCHS = 0
+
+# -----------------------------------------------------------------------------
+# Dataset
+# -----------------------------------------------------------------------------
+_C.DATASETS = CN()
+_C.DATASETS.ROOT_DIR = './data'
+
+
+_C.OUTPUT_DIR = ''

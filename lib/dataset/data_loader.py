@@ -7,10 +7,9 @@ from PIL import Image
 
 
 class ImageDataset(Dataset):
-    def __init__(self, dataset, root=None, transform=None):
+    def __init__(self, dataset, transform=None):
         super(ImageDataset, self).__init__()
         self.dataset = dataset
-        self.root = root
         self.transform = transform
 
     def __len__(self):
@@ -27,10 +26,14 @@ class ImageDataset(Dataset):
         return img, pid, camid, img_path
 
 
-def collate_fn(batch):
+def train_collate_fn(batch):
     imgs, pids, camids, img_paths = zip(*batch)
     pids = torch.tensor(pids, dtype=torch.int64)
-    camids = torch.tensor(camids, dtype=torch.int64)
+    return torch.stack(imgs, dim=0), pids, camids, img_paths
+
+
+def val_collate_fn(batch):
+    imgs, pids, camids, img_paths = zip(*batch)
     return torch.stack(imgs, dim=0), pids, camids, img_paths
 
 
@@ -48,7 +51,7 @@ def get_train_loader(dataset):
     ])
 
     train_set = ImageDataset(dataset, train_transformer)
-    train_loader = DataLoader(train_set, batch_size=64, shuffle=True, num_workers=8, collate_fn=collate_fn)
+    train_loader = DataLoader(train_set, batch_size=64, shuffle=True, num_workers=8, collate_fn=train_collate_fn)
 
     return train_loader
 
@@ -64,6 +67,6 @@ def get_test_loader(dataset):
         normalizer
     ])
     test_set = ImageDataset(dataset, test_transformer)
-    test_loader = DataLoader(test_set, batch_size=128, shuffle=False, num_workers=8, collate_fn=collate_fn)
+    test_loader = DataLoader(test_set, batch_size=128, shuffle=False, num_workers=8, collate_fn=val_collate_fn)
 
     return test_loader

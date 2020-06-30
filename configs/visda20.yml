@@ -1,0 +1,5 @@
+MODEL:
+  PRETRAIN_PATH: ''
+
+DATASETS:
+  ROOT_DIR: ''

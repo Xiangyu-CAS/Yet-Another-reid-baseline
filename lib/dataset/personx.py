@@ -3,7 +3,7 @@ import re
 
 import os.path as osp
 
-from .bases import BaseImageDataset
+from .base import BaseImageDataset
 
 
 class PersonX(BaseImageDataset):
@@ -16,8 +16,8 @@ class PersonX(BaseImageDataset):
     def __init__(self, root='', verbose=True, **kwargs):
         super(PersonX, self).__init__()
         self.dataset_dir = osp.join(root, self.dataset_dir)
-        # self.train_dir = osp.join(self.dataset_dir, 'image_train')
-        self.train_dir = osp.join(self.dataset_dir, 'image_train_spgan')
+        self.train_dir = osp.join(self.dataset_dir, 'image_train')
+        # self.train_dir = osp.join(self.dataset_dir, 'image_train_spgan')
         self.query_dir = osp.join(self.dataset_dir, 'image_query')
         self.gallery_dir = osp.join(self.dataset_dir, 'image_gallery')
 
@@ -38,6 +38,8 @@ class PersonX(BaseImageDataset):
         self.num_train_pids, self.num_train_imgs, self.num_train_cams = self.get_imagedata_info(self.train)
         self.num_query_pids, self.num_query_imgs, self.num_query_cams = self.get_imagedata_info(self.query)
         self.num_gallery_pids, self.num_gallery_imgs, self.num_gallery_cams = self.get_imagedata_info(self.gallery)
+
+        self.num_query = len(query)
 
     def _check_before_run(self):
         """Check if all files are available before going deeper"""

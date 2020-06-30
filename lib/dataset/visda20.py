@@ -3,7 +3,7 @@ import re
 
 import os.path as osp
 
-from .bases import BaseImageDataset
+from .base import BaseImageDataset
 
 
 class VisDA20(BaseImageDataset):
