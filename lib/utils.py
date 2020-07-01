@@ -27,9 +27,13 @@ def setup_logger(name, save_dir, distributed_rank):
 
 def load_checkpoint(model, path):
     param_dict = torch.load(path)
-    model_keys = model.state_dict().keys()
+    if 'model_state' in param_dict.keys():
+        param_dict = param_dict['model_state']
+    elif 'state_dict' in param_dict.keys():
+        param_dict = param_dict['state_dict']
+
     for i in param_dict:
-        if i not in model_keys:
+        if i not in model.state_dict().keys():
             print('skip key {}'.format(i))
             continue
         if model.state_dict()[i].shape != param_dict[i].shape:

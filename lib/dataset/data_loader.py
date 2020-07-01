@@ -4,6 +4,8 @@ import torchvision.transforms as T
 
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
+from .transforms.augmix import AugMix
+from .transforms.autoaug import ImageNetPolicy
 
 
 class ImageDataset(Dataset):
@@ -37,7 +39,7 @@ def val_collate_fn(batch):
     return torch.stack(imgs, dim=0), pids, camids, img_paths
 
 
-def get_train_loader(dataset):
+def get_train_loader(dataset, cfg):
     height, width = 256, 128
     normalizer = T.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
@@ -46,17 +48,19 @@ def get_train_loader(dataset):
         T.RandomHorizontalFlip(p=0.5),
         T.Pad(10),
         T.RandomCrop((height, width)),
+        ImageNetPolicy(prob=cfg.INPUT.AUTOAUG_PROB),
+        AugMix(prob=cfg.INPUT.AUGMIX_PROB),
         T.ToTensor(),
         normalizer,
     ])
 
     train_set = ImageDataset(dataset, train_transformer)
-    train_loader = DataLoader(train_set, batch_size=64, shuffle=True, num_workers=8, collate_fn=train_collate_fn)
+    train_loader = DataLoader(train_set, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, num_workers=8, collate_fn=train_collate_fn)
 
     return train_loader
 
 
-def get_test_loader(dataset):
+def get_test_loader(dataset, cfg):
     height, width = 256, 128
     normalizer = T.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
