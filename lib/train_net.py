@@ -33,7 +33,8 @@ class Trainer(object):
     def do_train(self, dataset):
         num_class, _, _ = dataset.get_imagedata_info(dataset.train)
 
-        model = Head(self.encoder, num_class).cuda()
+        model = Head(self.encoder, num_class)
+        model.cuda()
 
         # optimizer and scheduler
         params = [{"params": [value]} for key, value in model.named_parameters() if value.requires_grad]

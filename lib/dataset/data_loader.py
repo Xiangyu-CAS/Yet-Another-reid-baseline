@@ -48,6 +48,7 @@ def get_train_loader(dataset, cfg):
         T.RandomHorizontalFlip(p=0.5),
         T.Pad(10),
         T.RandomCrop((height, width)),
+        T.RandomApply([T.ColorJitter(brightness=0.2, contrast=0.15, saturation=0, hue=0)], p=cfg.INPUT.COLORJIT_PROB),
         ImageNetPolicy(prob=cfg.INPUT.AUTOAUG_PROB),
         AugMix(prob=cfg.INPUT.AUGMIX_PROB),
         T.ToTensor(),

@@ -16,8 +16,8 @@ class PersonX(BaseImageDataset):
     def __init__(self, root='', verbose=True, **kwargs):
         super(PersonX, self).__init__()
         self.dataset_dir = osp.join(root, self.dataset_dir)
-        self.train_dir = osp.join(self.dataset_dir, 'image_train')
-        # self.train_dir = osp.join(self.dataset_dir, 'image_train_spgan')
+        # self.train_dir = osp.join(self.dataset_dir, 'image_train')
+        self.train_dir = osp.join(self.dataset_dir, 'image_train_spgan')
         self.query_dir = osp.join(self.dataset_dir, 'image_query')
         self.gallery_dir = osp.join(self.dataset_dir, 'image_gallery')
 

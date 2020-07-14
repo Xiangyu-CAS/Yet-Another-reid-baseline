@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics.cluster import contingency_matrix
 
 
 def eval_func(indices, q_pids, g_pids, q_camids, g_camids, max_rank=50):
@@ -59,3 +60,19 @@ def eval_func(indices, q_pids, g_pids, q_camids, g_camids, max_rank=50):
     mAP = np.mean(all_AP)
 
     return all_cmc, mAP
+
+
+def eval_cluster(gt_labels, pred_labels, sparse=True):
+    n_samples = gt_labels.shape
+    c = contingency_matrix(gt_labels, pred_labels, sparse=sparse)
+    tk = np.dot(c.data, c.data) - n_samples
+    pk = np.sum(np.asarray(c.sum(axis=0)).ravel() ** 2) - n_samples
+    qk = np.sum(np.asarray(c.sum(axis=1)).ravel() ** 2) - n_samples
+
+    avg_pre = tk / pk
+    avg_rec = tk / qk
+
+    rec = avg_rec[0]
+    pre = avg_pre[0]
+    fscore = 2. * pre * rec / (pre + rec)
+    return rec, pre, fscore

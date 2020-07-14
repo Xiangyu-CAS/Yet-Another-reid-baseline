@@ -17,7 +17,7 @@ _C.MODEL.PRETRAIN_CHOICE = 'imagenet'
 _C.INPUT = CN()
 _C.INPUT.AUGMIX_PROB = 0.0 # augmix
 _C.INPUT.AUTOAUG_PROB = 0.0 # auto augmentation
-
+_C.INPUT.COLORJIT_PROB = 0.0 # Color jitter
 # -----------------------------------------------------------------------------
 # Solver
 # -----------------------------------------------------------------------------

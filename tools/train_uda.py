@@ -32,7 +32,7 @@ def iterative_dbscan(cfg, logger):
         dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
 
         # from scratch
-        load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
+        #load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
         #if os.path.exists(os.path.join(cfg.OUTPUT_DIR, 'best.pth')):
         #    load_checkpoint(trainer.encoder, os.path.join(cfg.OUTPUT_DIR, 'best.pth'))
         trainer.do_train(dataset)

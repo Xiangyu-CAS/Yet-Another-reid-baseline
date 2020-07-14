@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from torch.nn import functional as F
 
-def DBSCAN_cluster(feats, dataset, logger, eps=0.4, min_samples=4):
+def DBSCAN_cluster(feats, dataset, logger, eps=0.6, min_samples=4):
     logger.info('start generating pseduo label')
     # distmat = 1 - torch.mm(feats, feats.t()) + 1e-5
     # distmat = distmat.cpu().numpy()
@@ -12,7 +12,7 @@ def DBSCAN_cluster(feats, dataset, logger, eps=0.4, min_samples=4):
     distmat = compute_jaccard_distance(feats)
 
     logger.info('eps in cluster: {:.3f}'.format(eps))
-    cluster = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed', n_jobs=16)
+    cluster = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed', n_jobs=-1)
     logger.info('Clustering and labeling...')
     labels = cluster.fit_predict(distmat)
     num_ids = len(set(labels)) - 1
