@@ -139,3 +139,11 @@ def resnet50_ibn_a(last_stride=1,  **kwargs):
     model = ResNet_IBN(last_stride, Bottleneck_IBN, [3, 4, 6, 3], **kwargs)
     return model
 
+
+def resnet101_ibn_a(last_stride=1, **kwargs):
+    """Constructs a ResNet-101 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet_IBN(last_stride, Bottleneck_IBN, [3, 4, 23, 3], **kwargs)
+    return model

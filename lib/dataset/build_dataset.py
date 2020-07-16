@@ -1,9 +1,11 @@
 from .personx import PersonX
 from .visda20 import VisDA20
+from .visda20_pseudo import VisDA20Pseudo
 
 factory = {
     'personx': PersonX,
     'visda20': VisDA20,
+    'visda20_pseudo': VisDA20Pseudo
     }
 
 

@@ -9,6 +9,7 @@ from lib.modeling.build_model import Encoder, Head
 from lib.dataset.data_loader import get_train_loader, get_test_loader
 from lib.utils import AverageMeter, load_checkpoint
 from lib.evaluation import eval_func
+from lib.losses.build_loss import build_loss_fn
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -26,20 +27,21 @@ class Trainer(object):
         self.encoder = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
                                cfg.MODEL.PRETRAIN_CHOICE).cuda()
         self.cfg = cfg
-        self.loss_fn = F.cross_entropy
 
         self.logger = logging.getLogger("reid_baseline.train")
 
     def do_train(self, dataset):
         num_class, _, _ = dataset.get_imagedata_info(dataset.train)
 
-        model = Head(self.encoder, num_class)
+        model = Head(self.encoder, num_class, self.cfg)
         model.cuda()
 
         # optimizer and scheduler
         params = [{"params": [value]} for key, value in model.named_parameters() if value.requires_grad]
         optimizer = torch.optim.Adam(params, lr=self.cfg.SOLVER.BASE_LR, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(self.cfg.SOLVER.MAX_EPOCHS))
+        loss_fn = build_loss_fn(self.cfg, num_class)
+
 
         if self.cfg.SOLVER.FP16:
             logging.getLogger("Using Mix Precision training")
@@ -54,29 +56,29 @@ class Trainer(object):
         for epoch in range(self.cfg.SOLVER.MAX_EPOCHS):
             self.logger.info("Epoch[{}] lr={:.2e}"
                         .format(epoch, scheduler.get_lr()[0]))
-            self.train_epoch(model, optimizer, train_loader, epoch)
+            self.train_epoch(model, optimizer, loss_fn, train_loader, epoch)
             scheduler.step(epoch)
 
             # validation
-            if epoch % 5 == 0 or epoch == self.cfg.SOLVER.MAX_EPOCHS - 1:
+            if epoch % 2 == 0 or epoch == self.cfg.SOLVER.MAX_EPOCHS - 1:
                 cur_mAP = self.validate(model, test_loader, len(dataset.query))
                 if cur_mAP > best_mAP:
                     best_mAP = cur_mAP
                     torch.save(self.encoder.state_dict(), os.path.join(self.cfg.OUTPUT_DIR, 'best.pth'))
         self.logger.info("best mAP: {:.1%}".format(best_mAP))
 
-    def train_epoch(self, model, optimizer, train_loader, epoch):
+    def train_epoch(self, model, optimizer, loss_fn, train_loader, epoch):
         losses = AverageMeter()
         data_time = AverageMeter()
         model_time = AverageMeter()
         model.train()
 
-        # if epoch < self.cfg.SOLVER.FREEZE_EPOCHS:
-        #     self.logger.info("freeze encoder training")
-        #     self.freeze_encoder()
-        # elif epoch == self.cfg.SOLVER.FREEZE_EPOCHS:
-        #     self.logger.info("open encoder training")
-        #     self.open_encoder()
+        if epoch < self.cfg.SOLVER.FREEZE_EPOCHS:
+            self.logger.info("freeze encoder training")
+            self.freeze_encoder()
+        elif epoch == self.cfg.SOLVER.FREEZE_EPOCHS:
+            self.logger.info("open encoder training")
+            self.open_encoder()
 
         start = time.time()
         data_start = time.time()
@@ -88,8 +90,8 @@ class Trainer(object):
 
             model_start = time.time()
             optimizer.zero_grad()
-            score, feat = model(input)
-            loss = self.loss_fn(score, target)
+            score, feat = model(input, target)
+            loss = loss_fn(score, feat, target)
 
             if self.cfg.SOLVER.FP16:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -117,7 +119,7 @@ class Trainer(object):
             for batch in test_loader:
                 data, pid, camid, img_path = batch
                 data = data.cuda()
-                score, feat = model(data)
+                feat = model.encoder(data)
 
                 feats.append(feat)
                 pids.extend(pid)
@@ -161,12 +163,14 @@ class Trainer(object):
 
     def freeze_encoder(self):
         for name, module in self.encoder.named_children():
-            module.eval()
-            for p in module.parameters():
-                p.requires_grad = False
+            if 'base' in name:
+                module.eval()
+                for p in module.parameters():
+                    p.requires_grad = False
 
     def open_encoder(self):
         for name, module in self.encoder.named_children():
-            module.train()
-            for p in module.parameters():
-                p.requires_grad = True
+            if 'base' in name:
+                module.train()
+                for p in module.parameters():
+                    p.requires_grad = True

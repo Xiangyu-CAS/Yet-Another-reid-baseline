@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 from .transforms.augmix import AugMix
 from .transforms.autoaug import ImageNetPolicy
-
+from lib.sampler import RandomIdentitySampler, BalancedIdentitySampler
 
 class ImageDataset(Dataset):
     def __init__(self, dataset, transform=None):
@@ -52,11 +52,20 @@ def get_train_loader(dataset, cfg):
         ImageNetPolicy(prob=cfg.INPUT.AUTOAUG_PROB),
         AugMix(prob=cfg.INPUT.AUGMIX_PROB),
         T.ToTensor(),
+        T.RandomErasing(p=cfg.INPUT.RE_PROB),
         normalizer,
     ])
 
     train_set = ImageDataset(dataset, train_transformer)
-    train_loader = DataLoader(train_set, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, num_workers=8, collate_fn=train_collate_fn)
+    if cfg.DATALOADER.SAMPLER == 'random_identity':
+        sampler = RandomIdentitySampler(dataset, cfg.SOLVER.BATCH_SIZE, cfg.DATALOADER.NUM_INSTANCE)
+    elif cfg.DATALOADER.SAMPLER == 'balanced_identity':
+        sampler = BalancedIdentitySampler(dataset, cfg.SOLVER.BATCH_SIZE, cfg.DATALOADER.NUM_INSTANCE)
+    else:
+        sampler = None
+    train_loader = DataLoader(train_set, batch_size=cfg.SOLVER.BATCH_SIZE,
+                              shuffle=True if not sampler else False, num_workers=8,
+                              sampler=sampler, collate_fn=train_collate_fn)
 
     return train_loader
 

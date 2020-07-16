@@ -24,7 +24,7 @@ def iterative_dbscan(cfg, logger):
     dataset.query = src_dataset.query
     dataset.gallery = src_dataset.gallery
 
-    iteration = 5
+    iteration = 4
     pseudo_label_dataset = []
     for i in range(iteration):
         dataset.train = merge_datasets([src_dataset.train, pseudo_label_dataset])
@@ -32,11 +32,11 @@ def iterative_dbscan(cfg, logger):
         dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
 
         # from scratch
-        #load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
+        load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
         #if os.path.exists(os.path.join(cfg.OUTPUT_DIR, 'best.pth')):
         #    load_checkpoint(trainer.encoder, os.path.join(cfg.OUTPUT_DIR, 'best.pth'))
         trainer.do_train(dataset)
-
+        torch.cuda.empty_cache()
         test_loader = get_test_loader(target_dataset.train, cfg)
         feats = trainer.extract_feature(test_loader)
         pseudo_label_dataset = DBSCAN_cluster(feats, target_dataset.train, logger)
