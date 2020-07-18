@@ -6,7 +6,7 @@ from .resnet_ibn_a import resnet50_ibn_a, resnet101_ibn_a
 from .resnest import resnest50, resnest101
 from .regnet import regnety_800mf
 from lib.utils import load_checkpoint
-from lib.losses.id_loss import Cosface, Circle, Arcface, CrossEntropyLabelSmooth
+from lib.losses.id_loss import Cosface, Circle, Arcface, CrossEntropyLabelSmooth, CosineSoftmax
 
 # backbone func and feature channels
 backbone_factory = {
@@ -38,6 +38,9 @@ class Encoder(nn.Module):
         self.bottleneck = nn.BatchNorm1d(self.in_planes)
         self.bottleneck.apply(weights_init_kaiming)
 
+    def reset_bn(self):
+        self.bottleneck.apply(weights_init_kaiming)
+
     def forward(self, x):
         featmap = self.base(x)  # (b, 2048, 1, 1)
         global_feat = self.gap(featmap)
@@ -57,6 +60,8 @@ class Head(nn.Module):
         elif self.id_loss_type == 'circle':
             self.classifier = Circle(self.encoder.in_planes, num_class,
                               cfg.SOLVER.COSINE_SCALE, cfg.SOLVER.COSINE_MARGIN)
+        elif self.id_loss_type == 'cosine':
+            self.classifier = CosineSoftmax(self.encoder.in_planes, num_class)
         else:
             self.classifier = torch.nn.Linear(self.encoder.in_planes, num_class, bias=False)
         self.classifier.apply(weights_init_classifier)

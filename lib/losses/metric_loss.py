@@ -76,16 +76,73 @@ class TripletLoss(object):
         else:
             self.ranking_loss = nn.SoftMarginLoss()
 
-    def __call__(self, global_feat, labels, normalize_feature=True):
-        if normalize_feature:
-            global_feat = torch.nn.functional.normalize(global_feat, dim=1, p=2)
-        dist_mat = 2 - 2 * global_feat.mm(global_feat.t())
-        dist_ap, dist_an = hard_example_mining(
-            dist_mat, labels, self.mining_method)
+    # def __call__(self, global_feat, labels, normalize_feature=True):
+    #     if normalize_feature:
+    #         global_feat = torch.nn.functional.normalize(global_feat, dim=1, p=2)
+    #     dist_mat = 2 - 2 * global_feat.mm(global_feat.t())
+    #     dist_ap, dist_an = hard_example_mining(
+    #         dist_mat, labels, self.mining_method)
+    #
+    #     y = dist_an.new().resize_as_(dist_an).fill_(1)
+    #     if self.margin > 0:
+    #         loss = self.ranking_loss(dist_an, dist_ap, y)
+    #     else:
+    #         loss = self.ranking_loss(dist_an - dist_ap, y)
+    #     return loss
+
+    def __call__(self, batch_feat, batch_labels, memory_feat, memory_labels):
+        # distmat = 2 - 2 * torch.mm(batch_feat, memory_feat.t())
+        distmat = 2 - 2 * torch.mm(memory_feat, batch_feat.t())
+        distmat = distmat.t()
+
+        N, M = distmat.shape
+
+        is_pos = batch_labels.unsqueeze(dim=-1).expand(N, M).eq(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
+        is_neg = batch_labels.unsqueeze(dim=-1).expand(N, M).ne(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
+        dist_ap, relative_p_inds = torch.max(
+            distmat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
+
+        dist_an, relative_n_inds = torch.min(
+            distmat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+
+        dist_ap = dist_ap.squeeze(1)
+        dist_an = dist_an.squeeze(1)
 
         y = dist_an.new().resize_as_(dist_an).fill_(1)
         if self.margin > 0:
             loss = self.ranking_loss(dist_an, dist_ap, y)
         else:
             loss = self.ranking_loss(dist_an - dist_ap, y)
+        return loss
+
+
+class CircleLoss(nn.Module):
+    def __init__(self, m=0.25, s=128):
+        super(CircleLoss, self).__init__()
+        self.m = m
+        self.s = s
+        self.soft_plus = nn.Softplus()
+
+    def forward(self, batch_feat, batch_labels, memory_feat, memory_labels):
+        distmat = 2 - 2 * torch.mm(memory_feat, batch_feat.t())
+        distmat = distmat.t()
+
+        N, M = distmat.shape
+        is_pos = batch_labels.unsqueeze(dim=-1).expand(N, M).eq(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
+        is_neg = batch_labels.unsqueeze(dim=-1).expand(N, M).ne(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
+
+
+        s_p = distmat[is_pos].contiguous().view(N, -1)
+        s_n = distmat[is_neg].contiguous().view(N, -1)
+
+        alpha_p = F.relu(-s_p.detach() + 1 + self.m)
+        alpha_n = F.relu(s_n.detach() + self.m)
+        delta_p = 1 - self.m
+        delta_n = self.m
+
+        logit_p = - self.s * alpha_p * (s_p - delta_p)
+        logit_n = self.s * alpha_n * (s_n - delta_n)
+
+        loss = self.soft_plus(torch.logsumexp(logit_n, dim=1) + torch.logsumexp(logit_p, dim=1)).mean()
+
         return loss

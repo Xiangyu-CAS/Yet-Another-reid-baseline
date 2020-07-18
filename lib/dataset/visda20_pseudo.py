@@ -16,7 +16,7 @@ class VisDA20Pseudo(BaseImageDataset):
     def __init__(self, root='', verbose=True, **kwargs):
         super(VisDA20Pseudo, self).__init__()
         self.dataset_dir = osp.join(root, self.dataset_dir)
-        self.train_dir = osp.join(self.dataset_dir, 'DBSCAN-second')
+        self.train_dir = osp.join(self.dataset_dir, 'DBSCAN-third')
         self.query_dir = osp.join(self.dataset_dir, 'image_query')
         self.gallery_dir = osp.join(self.dataset_dir, 'image_gallery')
 
@@ -61,7 +61,7 @@ class VisDA20Pseudo(BaseImageDataset):
             pid, camid = map(int, pattern.search(img_path).groups())
             #if pid == -1 or pid == 0: continue  # junk images are just ignored
             # if pid == -1: continue  # junk images are just ignored
-            camid -= 1  # index starts from 0
+            camid = 0  # index starts from 0
             if relabel: pid = pid2label[pid]
             dataset.append((img_path, pid, camid))
 

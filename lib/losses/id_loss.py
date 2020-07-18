@@ -6,6 +6,17 @@ from torch.nn import Parameter
 import math
 
 
+class CosineSoftmax(nn.Module):
+    def __init__(self, in_features, out_features):
+        super(CosineSoftmax, self).__init__()
+        self.weight = Parameter(torch.Tensor(out_features, in_features))
+        nn.init.xavier_uniform_(self.weight)
+
+    def __call__(self, feat):
+        score = F.linear(F.normalize(feat), F.normalize(self.weight))
+        return 30 * score
+
+
 class Circle(nn.Module):
     def __init__(self, in_features, out_features, s=256, m=0.25):
         super(Circle, self).__init__()

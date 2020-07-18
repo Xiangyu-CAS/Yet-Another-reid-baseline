@@ -19,8 +19,8 @@ def naive_train(cfg, logger):
     trainer = Trainer(cfg)
     dataset = BaseImageDataset()
 
-    trainset = ['personx', 'visda20_pseudo']
-    valset = ['personx']
+    trainset = cfg.DATASETS.TRAIN #['personx', 'visda20_pseudo']
+    valset = cfg.DATASETS.TEST #['personx']
     for element in trainset:
         cur_dataset = init_dataset(element, root=cfg.DATASETS.ROOT_DIR)
         dataset.train = merge_datasets([dataset.train, cur_dataset.train])
@@ -35,8 +35,6 @@ def naive_train(cfg, logger):
     load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
     trainer.do_train(dataset)
     torch.cuda.empty_cache()
-
-
 
 
 def main():

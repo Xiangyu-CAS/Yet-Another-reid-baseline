@@ -20,7 +20,7 @@ def DBSCAN_cluster(feats, dataset, logger, eps=0.6, min_samples=4):
 
     results = []
     for (img_path, _, camid), label in zip(dataset, labels):
-        if label == -1 or label == 0:
+        if label == -1:
             continue
         results.append([img_path, label, camid])
     return results

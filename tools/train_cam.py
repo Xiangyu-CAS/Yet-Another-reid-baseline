@@ -8,43 +8,51 @@ from torch.backends import cudnn
 sys.path.append('.')
 from lib.config import _C as cfg
 from lib.utils import setup_logger, load_checkpoint
+from lib.train_net import Trainer
 from lib.dataset.build_dataset import init_dataset
 from lib.dataset.base import merge_datasets, BaseImageDataset
-from lib.modeling.build_model import Encoder
 from lib.dataset.data_loader import get_test_loader
-from lib.post_processing import post_processor
+from lib.cluster import DBSCAN_cluster
 
 
-def inference(cfg, logger):
-    testset = 'personx'
-    dataset = init_dataset(testset, root=cfg.DATASETS.ROOT_DIR)
+def exchange_pid_camid(dataset):
+    train = []
+    query = []
+    gallery = []
+    for img_path, pid, camid in dataset.train:
+        train.append([img_path, camid, pid])
+    for img_path, pid, camid in dataset.query:
+        query.append([img_path, camid, pid])
+    for img_path, pid, camid in dataset.gallery:
+        gallery.append([img_path, camid, pid])
+    dataset.train = train
+    dataset.query = query
+    dataset.gallery = gallery
+    dataset.relabel_train()
+
+
+def naive_train(cfg, logger):
+    trainer = Trainer(cfg)
+    dataset = BaseImageDataset()
+
+    trainset = ['visda20']
+    valset = ['personx']
+    for element in trainset:
+        cur_dataset = init_dataset(element, root=cfg.DATASETS.ROOT_DIR)
+        dataset.train = merge_datasets([dataset.train, cur_dataset.train])
+        dataset.relabel_train()
+    for element in valset:
+        cur_dataset = init_dataset(element, root=cfg.DATASETS.ROOT_DIR)
+        dataset.query = merge_datasets([dataset.query, cur_dataset.query])
+        dataset.gallery = merge_datasets([dataset.gallery, cur_dataset.gallery])
+
+    exchange_pid_camid(dataset)
+
     dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
-    test_loader = get_test_loader(dataset.query + dataset.gallery, cfg)
 
-    model = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
-                    cfg.MODEL.PRETRAIN_CHOICE).cuda()
-
-    logger.info("loading model from {}".format(cfg.TEST.WEIGHT))
-    load_checkpoint(model, cfg.TEST.WEIGHT)
-
-    feats, pids, camids, img_paths = [], [], [], []
-    with torch.no_grad():
-        model.eval()
-        for batch in test_loader:
-            data, pid, camid, img_path = batch
-            data = data.cuda()
-            feat = model(data)
-            feats.append(feat)
-            pids.extend(pid)
-            camids.extend(camid)
-            img_paths.extend(img_path)
-    del model
+    load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
+    trainer.do_train(dataset)
     torch.cuda.empty_cache()
-
-    feats = torch.cat(feats, dim=0)
-    feats = torch.nn.functional.normalize(feats, dim=1, p=2)
-
-    return [feats, pids, camids, img_paths], len(dataset.query)
 
 
 def main():
@@ -74,14 +82,7 @@ def main():
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
     cudnn.benchmark = True
-
-    batch, num_query = inference(cfg, logger)
-    cmc, mAP, indices_np = post_processor(cfg, batch, num_query)
-
-    logger.info('Validation Results')
-    logger.info("mAP: {:.1%}".format(mAP))
-    for r in [1, 5, 10]:
-        logger.info("CMC curve, Rank-{:<3}:{:.1%}".format(r, cmc[r - 1]))
+    naive_train(cfg, logger)
 
 
 if __name__ == '__main__':

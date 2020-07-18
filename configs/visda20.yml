@@ -1,6 +1,7 @@
 MODEL:
   PRETRAIN_PATH: ''
   ID_LOSS_TYPE: 'cosface' #{'softmax', 'cosface'}
+  METRIC_LOSS_TYPE: 'triplet'
 
 INPUT:
   AUGMIX_PROB: 0.5
@@ -10,6 +11,8 @@ INPUT:
 
 DATASETS:
   ROOT_DIR: ''
+  TRAIN: ('personx',)
+  TEST: ('personx',)
 
 DATALOADER:
   SAMPLER: 'balanced_identity' #{'random_identity', 'balanced_identity', 'random'}

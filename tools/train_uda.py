@@ -16,7 +16,7 @@ from lib.cluster import DBSCAN_cluster
 
 
 def iterative_dbscan(cfg, logger):
-    trainer = Trainer(cfg)
+    # trainer = Trainer(cfg)
     src_dataset = init_dataset('personx', root=cfg.DATASETS.ROOT_DIR)
     target_dataset = init_dataset('visda20', root=cfg.DATASETS.ROOT_DIR)
 
@@ -24,15 +24,19 @@ def iterative_dbscan(cfg, logger):
     dataset.query = src_dataset.query
     dataset.gallery = src_dataset.gallery
 
-    iteration = 4
+    iteration = 8
     pseudo_label_dataset = []
+    best_mAP = 0
     for i in range(iteration):
         dataset.train = merge_datasets([src_dataset.train, pseudo_label_dataset])
         dataset.relabel_train()
         dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
 
+        trainer = Trainer(cfg)
+        trainer
         # from scratch
         load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
+        trainer.encoder.reset_bn()
         #if os.path.exists(os.path.join(cfg.OUTPUT_DIR, 'best.pth')):
         #    load_checkpoint(trainer.encoder, os.path.join(cfg.OUTPUT_DIR, 'best.pth'))
         trainer.do_train(dataset)
