@@ -4,13 +4,14 @@ import time
 import os
 import numpy as np
 import logging
+import faiss
 
 from lib.modeling.build_model import Encoder, Head
 from lib.dataset.data_loader import get_train_loader, get_test_loader
 from lib.utils import AverageMeter, load_checkpoint
 from lib.evaluation import eval_func
 from lib.losses.build_loss import build_loss_fn
-from lib.memory_bank import VanillaMemoryBank
+from lib.memory_bank import VanillaMemoryBank, MoCo
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -37,10 +38,12 @@ class Trainer(object):
         if cfg.MODEL.MEMORY_BANK:
             self.encoder_ema = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
                                        cfg.MODEL.PRETRAIN_CHOICE).cuda()
-            for param_k in self.encoder_ema.parameters():
+            for param_q, param_k in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
                 param_k.requires_grad = False  # not update by gradient
+                param_k.data.copy_(param_q.data)
 
             self.memory_bank = VanillaMemoryBank()
+            #self.memory_bank = MoCo()
             self.use_memory_bank = True
 
     def do_train(self, dataset):
@@ -80,7 +83,8 @@ class Trainer(object):
         self.logger.info("best mAP: {:.1%}".format(self.best_mAP))
 
     def train_epoch(self, model, optimizer, loss_fn, train_loader, epoch):
-        losses = AverageMeter()
+        id_losses = AverageMeter()
+        metric_losses = AverageMeter()
         data_time = AverageMeter()
         model_time = AverageMeter()
         model.train()
@@ -91,6 +95,11 @@ class Trainer(object):
         elif epoch == self.cfg.SOLVER.FREEZE_EPOCHS:
             self.logger.info("open encoder training")
             self.open_encoder()
+
+        # if self.cfg.MODEL.PRETRAIN_CHOICE == 'finetune':
+        #     for name, module in self.encoder.named_children():
+        #         for p in module.parameters():
+        #             p.requires_grad = False
 
         start = time.time()
         data_start = time.time()
@@ -107,15 +116,21 @@ class Trainer(object):
 
             if self.use_memory_bank:
                 with torch.no_grad():
-                    self._momentum_update_ema_encoder()
-                    feat_ema = self.encoder_ema(input)
-                    feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
-                    self.memory_bank.enqueue_dequeue(feat_ema, target.detach())
+                    #self._momentum_update_ema_encoder()
+                    #feat_ema = self.encoder_ema(input)
+                    #feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
+                    feat_ema = feat
+                    self.memory_bank.enqueue_dequeue(feat_ema.detach(), target.detach())
+
+                #loss_memory = self.memory_bank(feat, feat_ema, target)
 
                 memory_feat, memory_target = self.memory_bank.get()
-                loss = loss_fn(score, feat, target, memory_feat, memory_target)
+                id_loss, metric_loss = loss_fn(score, feat, target, memory_feat, memory_target)
+                #metric_loss = loss_memory
+                loss = id_loss + metric_loss
             else:
-                loss = loss_fn(score, feat, target, feat, target)
+                id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
+                loss = id_loss + metric_loss
             # loss = loss_fn(score, feat, target)
 
             if self.cfg.SOLVER.FP16:
@@ -124,14 +139,15 @@ class Trainer(object):
             else:
                 loss.backward()
             optimizer.step()
-            losses.update(loss.item()), input.size(0)
+            id_losses.update(id_loss.item()), input.size(0)
+            metric_losses.update(metric_loss.item()), input.size(0)
             model_time.update(time.time() - model_start)
             data_start = time.time()
 
             if iteration % 100 == 0:
-                self.logger.info("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, data time: {:.3f}s, model time: {:.3f}s"
+                self.logger.info("Epoch[{}] Iteration[{}/{}] ID Loss: {:.3f}, Metric Loss: {:.3f}, data time: {:.3f}s, model time: {:.3f}s"
                         .format(epoch, iteration, len(train_loader),
-                                losses.val, data_time.val, model_time.val))
+                                id_losses.val, metric_losses.val, data_time.val, model_time.val))
         end = time.time()
         self.logger.info("epoch takes {:.3f}s".format((end - start)))
 
@@ -161,10 +177,19 @@ class Trainer(object):
         g_pids = np.asarray(pids[num_query:])
         g_camids = np.asarray(camids[num_query:])
 
-        # distmat = 2 - 2 * torch.mm(qf, gf.t()) # Euclidean Distance
-        distmat = - torch.mm(qf, gf.t())# Cosine Distance
-        indices = distmat.argsort(dim=1)
-        indices = indices.cpu().numpy()
+        torch.cuda.empty_cache()
+
+        if feats.size(0) >= 50000: # too large for mm, use faiss
+            res = faiss.StandardGpuResources()
+            index = faiss.GpuIndexFlatIP(res, gf.shape[-1])
+            index.add(gf.cpu().numpy())
+            top_k = 100
+            sim_mat, indices = index.search(qf.cpu().numpy(), top_k)
+        else:
+            # distmat = 2 - 2 * torch.mm(qf, gf.t()) # Euclidean Distance
+            distmat = - torch.mm(qf, gf.t())# Cosine Distance
+            indices = distmat.argsort(dim=1)
+            indices = indices.cpu().numpy()
 
         cmc, mAP = eval_func(indices, q_pids, g_pids, q_camids, g_camids)
         self.logger.info("Validation Results")
@@ -205,6 +230,6 @@ class Trainer(object):
         """
         Momentum update of the key encoder
         """
-        m = 0.999
+        m = 0.99
         for param_q, param_k in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
             param_k.data = param_k.data * m + param_q.data * (1. - m)

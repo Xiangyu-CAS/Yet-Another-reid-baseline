@@ -96,3 +96,4 @@ class BalancedIdentitySampler(Sampler):
                 t = np.random.choice(t, size=self.num_instances, replace=True)
             ret.extend(t)
         return iter(ret)
+

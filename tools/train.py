@@ -32,7 +32,8 @@ def naive_train(cfg, logger):
 
     dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
 
-    load_checkpoint(trainer.encoder.base, cfg.MODEL.PRETRAIN_PATH)
+    if cfg.MODEL.PRETRAIN_CHOICE == 'finetune':
+        load_checkpoint(trainer.encoder, cfg.MODEL.PRETRAIN_PATH)
     trainer.do_train(dataset)
     torch.cuda.empty_cache()
 

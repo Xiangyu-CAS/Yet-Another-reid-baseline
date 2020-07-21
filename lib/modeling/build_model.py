@@ -48,7 +48,6 @@ class Encoder(nn.Module):
         feat = self.bottleneck(global_feat)
         return feat
 
-
 class Head(nn.Module):
     def __init__(self, encoder, num_class, cfg):
         super(Head, self).__init__()
@@ -79,14 +78,15 @@ class Head(nn.Module):
 
 class GeM(nn.Module):
 
-    def __init__(self, p=3.0, eps=1e-6, freeze_p=True):
+    def __init__(self, size=(1, 1), p=3.0, eps=1e-6, freeze_p=True):
         super(GeM, self).__init__()
         self.p = p if freeze_p else torch.nn.parameter(torch.ones(1) * p)
         self.eps = eps
+        self.size = size
 
     def forward(self, x):
         return torch.nn.functional.adaptive_avg_pool2d(x.clamp(min=self.eps).pow(self.p),
-                            (1, 1)).pow(1. / self.p)
+                            self.size).pow(1. / self.p)
 
 
 def weights_init_kaiming(m):

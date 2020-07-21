@@ -1,0 +1,30 @@
+MODEL:
+  PRETRAIN_PATH: ''
+  ID_LOSS_TYPE: 'cosface' #{'softmax', 'cosface', 'circle'}
+  METRIC_LOSS_TYPE: 'triplet'
+
+INPUT:
+  AUGMIX_PROB: 0.5
+  AUTOAUG_PROB: 0.5
+  COLORJIT_PROB: 0.5
+  RE_PROB: 0.5
+
+DATASETS:
+  ROOT_DIR: ''
+  TRAIN: ('',)
+  TEST: ('',)
+
+DATALOADER:
+  SAMPLER: 'balanced_identity' #{'random_identity', 'balanced_identity', 'random'}
+  NUM_INSTANCE: 16
+
+SOLVER:
+  FP16: True
+  BATCH_SIZE: 64
+  MAX_EPOCHS: 60
+  FREEZE_EPOCHS: 5
+
+  COSINE_MARGIN: 0.35
+  COSINE_SCALE: 30
+
+  EVAL_PERIOD: 10

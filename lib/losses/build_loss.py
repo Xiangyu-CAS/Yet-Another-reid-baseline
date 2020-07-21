@@ -13,15 +13,13 @@ def build_loss_fn(cfg, num_classes):
     elif cfg.MODEL.METRIC_LOSS_TYPE == 'circle':
         metric_loss_fn = CircleLoss()
     else:
-        def metric_loss_fn(feat, target):
+        def metric_loss_fn(feat, target, memory_feat, memory_target):
             return 0
 
     # def loss_func(score, feat, target):
     #     loss = id_loss_fn(score, target) + metric_loss_fn(feat, target)
     #    return loss
     def loss_func(score, feat, target, memory_feat, memory_target):
-        loss = id_loss_fn(score, target) + metric_loss_fn(feat, target, memory_feat, memory_target)
-        return loss
-
+        return id_loss_fn(score, target), metric_loss_fn(feat, target, memory_feat, memory_target)
 
     return loss_func

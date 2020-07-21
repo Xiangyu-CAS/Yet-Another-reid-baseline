@@ -21,6 +21,7 @@ _C.INPUT.AUGMIX_PROB = 0.0 # augmix
 _C.INPUT.AUTOAUG_PROB = 0.0 # auto augmentation
 _C.INPUT.COLORJIT_PROB = 0.0 # Color jitter
 _C.INPUT.RE_PROB = 0.0#random erase
+_C.INPUT.FIGURE_PROB = 0.0 # random figures
 # -----------------------------------------------------------------------------
 # Solver
 # -----------------------------------------------------------------------------
@@ -37,6 +38,7 @@ _C.SOLVER.FREEZE_EPOCHS = 0
 _C.SOLVER.COSINE_MARGIN = 0.35
 _C.SOLVER.COSINE_SCALE = 30
 
+_C.SOLVER.EVAL_PERIOD = 2
 # -----------------------------------------------------------------------------
 # DataLoader
 # -----------------------------------------------------------------------------

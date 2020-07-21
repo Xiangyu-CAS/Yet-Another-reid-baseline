@@ -1,11 +1,15 @@
 from .personx import PersonX
 from .visda20 import VisDA20
 from .visda20_pseudo import VisDA20Pseudo
+from .market1501 import Market1501
+from .msmt17 import MSMT17
 
 factory = {
     'personx': PersonX,
     'visda20': VisDA20,
-    'visda20_pseudo': VisDA20Pseudo
+    'visda20_pseudo': VisDA20Pseudo,
+    'market1501': Market1501,
+    'msmt17': MSMT17,
     }
 
 

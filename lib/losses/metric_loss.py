@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-
+from lib.utils import euclidean_dist
 
 def hard_example_mining(dist_mat, labels, mining_method='batch_hard'):
     """For each anchor, find the hardest positive and negative sample.
@@ -91,8 +91,8 @@ class TripletLoss(object):
     #     return loss
 
     def __call__(self, batch_feat, batch_labels, memory_feat, memory_labels):
-        # distmat = 2 - 2 * torch.mm(batch_feat, memory_feat.t())
         distmat = 2 - 2 * torch.mm(memory_feat, batch_feat.t())
+        #distmat = euclidean_dist(memory_feat, batch_feat)
         distmat = distmat.t()
 
         N, M = distmat.shape
@@ -100,13 +100,18 @@ class TripletLoss(object):
         is_pos = batch_labels.unsqueeze(dim=-1).expand(N, M).eq(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
         is_neg = batch_labels.unsqueeze(dim=-1).expand(N, M).ne(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
         dist_ap, relative_p_inds = torch.max(
-            distmat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
+            distmat[is_pos].contiguous().view(N, -1), 1)
 
         dist_an, relative_n_inds = torch.min(
-            distmat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+            distmat[is_neg].contiguous().view(N, -1), 1)
 
-        dist_ap = dist_ap.squeeze(1)
-        dist_an = dist_an.squeeze(1)
+        # is_pos = batch_labels.unsqueeze(dim=-1).expand(N, M).eq(memory_labels.unsqueeze(dim=-1).expand(M, N).t()).float()
+        # sorted_mat_distance, positive_indices = torch.sort(distmat + (-9999999.) * (1 - is_pos), dim=1,
+        #                                                    descending=True)
+        # dist_ap = sorted_mat_distance[:, 0]
+        # sorted_mat_distance, negative_indices = torch.sort(distmat + 9999999. * is_pos, dim=1,
+        #                                                    descending=False)
+        # dist_an = sorted_mat_distance[:, 0]
 
         y = dist_an.new().resize_as_(dist_an).fill_(1)
         if self.margin > 0:

@@ -7,6 +7,8 @@ from PIL import Image
 from .transforms.augmix import AugMix
 from .transforms.autoaug import ImageNetPolicy
 from lib.sampler import RandomIdentitySampler, BalancedIdentitySampler
+from lib.dataset.transforms.transform import *
+
 
 class ImageDataset(Dataset):
     def __init__(self, dataset, transform=None):
