@@ -16,14 +16,14 @@ class PersonX(BaseImageDataset):
     def __init__(self, root='', verbose=True, **kwargs):
         super(PersonX, self).__init__()
         self.dataset_dir = osp.join(root, self.dataset_dir)
-        # self.train_dir = osp.join(self.dataset_dir, 'image_train')
+        #self.train_dir = osp.join(self.dataset_dir, 'image_train')
         self.train_dir = osp.join(self.dataset_dir, 'image_train_spgan')
         self.query_dir = osp.join(self.dataset_dir, 'image_query')
         self.gallery_dir = osp.join(self.dataset_dir, 'image_gallery')
 
         self._check_before_run()
 
-        train = self._process_dir(self.train_dir)
+        train = self._process_dir(self.train_dir)# + self._process_dir(self.train_dir_ori)
         train = self.relabel(train)
         query = self._load_in_order(self.query_dir, osp.join(self.dataset_dir, 'index_validation_query.txt'))
         gallery = self._load_in_order(self.gallery_dir, osp.join(self.dataset_dir, 'index_validation_gallery.txt'))

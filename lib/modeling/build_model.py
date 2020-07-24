@@ -2,7 +2,9 @@ import torch
 
 import torch
 from torch import nn
+from .resnet import resnet50
 from .resnet_ibn_a import resnet50_ibn_a, resnet101_ibn_a
+from .resnet_ibn_a_nl import resnet50_ibn_a_nl
 from .resnest import resnest50, resnest101
 from .regnet import regnety_800mf
 from lib.utils import load_checkpoint
@@ -10,11 +12,13 @@ from lib.losses.id_loss import Cosface, Circle, Arcface, CrossEntropyLabelSmooth
 
 # backbone func and feature channels
 backbone_factory = {
+    'resnet50': [resnet50, 2048],
     'resnet50_ibn_a': [resnet50_ibn_a, 2048],
     'resnet101_ibn_a': [resnet101_ibn_a, 2048],
     'resnest50': [resnest50, 2048],
     'resnest101': [resnest101, 2048],
     'regnety_800mf': [regnety_800mf, 768],
+    'resnet50_ibn_a_nl': [resnet50_ibn_a_nl, 2048],
 }
 
 
@@ -25,7 +29,7 @@ def build_backbone(name, *args, **kwargs):
 
 
 class Encoder(nn.Module):
-    def __init__(self, backbone_name, model_path, pretrain_choice):
+    def __init__(self, backbone_name, model_path, pretrain_choice, pooling='GeM'):
         super(Encoder, self).__init__()
         self.base, self.in_planes = build_backbone(backbone_name)
 
@@ -33,8 +37,12 @@ class Encoder(nn.Module):
             load_checkpoint(self.base, model_path)
             print('Loading pretrained ImageNet model......')
 
-        # self.gap = nn.AdaptiveAvgPool2d(1)
-        self.gap = GeM()
+        if pooling == 'GeM':
+            print('using GeM')
+            self.gap = GeM()
+        else:
+            self.gap = nn.AdaptiveAvgPool2d(1)
+
         self.bottleneck = nn.BatchNorm1d(self.in_planes)
         self.bottleneck.apply(weights_init_kaiming)
 
@@ -47,6 +55,7 @@ class Encoder(nn.Module):
         global_feat = global_feat.flatten(1)
         feat = self.bottleneck(global_feat)
         return feat
+
 
 class Head(nn.Module):
     def __init__(self, encoder, num_class, cfg):

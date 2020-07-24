@@ -72,3 +72,25 @@ def euclidean_dist(x, y):
     dist.addmm_(1, -2, x, y.t())
     dist = dist.clamp(min=1e-12).sqrt()
     return dist
+
+
+def freeze_module(module):
+    if isinstance(module, torch.nn.Conv2d):
+        module.weight.requires_grad_(False)
+        #module.bias.requires_grad_(False)
+    else:
+        for name, child in module.named_children():
+            freeze_module(child)
+
+
+def write_result(indices, dst_dir, topk=100):
+    indices = indices[:, :topk]
+    if not os.path.exists(dst_dir):
+        os.makedirs(dst_dir)
+    m, n = indices.shape
+    print('m: {}  n: {}'.format(m, n))
+    with open(os.path.join(dst_dir, 'result.txt'), 'w') as f:
+        for i in range(m):
+            write_line = indices[i]
+            write_line = ' '.join(map(str, write_line.tolist())) + '\n'
+            f.write(write_line)

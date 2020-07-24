@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 from lib.utils import euclidean_dist
+
 
 class VanillaMemoryBank(object):
     def __init__(self, dim=2048, k=10000):
@@ -32,13 +34,18 @@ class VanillaMemoryBank(object):
             self.ptr += q_size
 
 
+"""
+@author:  xingyu liao
+@contact: liaoxingyu5@jd.com
+"""
+
 class MoCo(nn.Module):
     """
     Build a MoCo memory with a queue
     https://arxiv.org/abs/1911.05722
     """
 
-    def __init__(self, dim=2048, K=12800):
+    def __init__(self, dim=2048, K=16384, m=0.25, s=96):
         """
         dim: feature dimension (default: 128)
         K: queue size; number of negative keys (default: 65536)
@@ -47,6 +54,9 @@ class MoCo(nn.Module):
         """
         super(MoCo, self).__init__()
         self.K = K
+
+        self.m = m
+        self.s = s
 
         # create the queue
         self.register_buffer("queue", torch.randn(dim, K, device='cuda'))
@@ -78,15 +88,20 @@ class MoCo(nn.Module):
         r"""
         Memory bank enqueue and compute metric loss
         Args:
-            feat_q:
-            feat_k:
-            targets:
+            feat_q: model features
+            feat_k: model_ema features
+            targets: gt labels
 
         Returns:
         """
+        # dequeue and enqueue
+        feat_k = nn.functional.normalize(feat_k, p=2, dim=1)
         self._dequeue_and_enqueue(feat_k, targets)
+        loss = self._circle_loss(feat_q, targets)
+        # loss = self._triplet_loss(feat_q, targets)
+        return loss
 
-        #dist_mat = 2 - 2 * torch.mm(feat_q, self.queue)
+    def _triplet_loss(self, feat_q, targets):
         dist_mat = euclidean_dist(feat_q, self.queue.t())
 
         N, M = dist_mat.size()
@@ -103,5 +118,35 @@ class MoCo(nn.Module):
 
         loss = F.soft_margin_loss(dist_an - dist_ap, y)
         if loss == float('Inf'): loss = F.margin_ranking_loss(dist_an, dist_ap, y, margin=0.3)
+
+        return loss
+
+    def _circle_loss(self, feat_q, targets):
+        feat_q = nn.functional.normalize(feat_q, p=2, dim=1)
+
+        sim_mat = torch.mm(feat_q, self.queue)
+
+        N, M = sim_mat.size()
+
+        is_pos = targets.view(N, 1).expand(N, M).eq(self.queue_label.expand(N, M)).float()
+        same_indx = torch.eye(N, N, device='cuda')
+        remain_indx = torch.zeros(N, M-N, device='cuda')
+        same_indx = torch.cat((same_indx, remain_indx), dim=1)
+        is_pos = is_pos - same_indx
+
+        is_neg = targets.view(N, 1).expand(N, M).ne(self.queue_label.expand(N, M)).float()
+
+        s_p = sim_mat * is_pos
+        s_n = sim_mat * is_neg
+
+        alpha_p = torch.clamp_min(-s_p.detach() + 1 + self.m, min=0.)
+        alpha_n = torch.clamp_min(s_n.detach() + self.m, min=0.)
+        delta_p = 1 - self.m
+        delta_n = self.m
+
+        logit_p = -self.s * alpha_p * (s_p - delta_p)
+        logit_n = self.s * alpha_n * (s_n - delta_n)
+
+        loss = nn.functional.softplus(torch.logsumexp(logit_p, dim=1) + torch.logsumexp(logit_n, dim=1)).mean()
 
         return loss

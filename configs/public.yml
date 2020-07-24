@@ -1,13 +1,16 @@
 MODEL:
-  PRETRAIN_PATH: ''
+  BACKBONE: 'resnet50'
+  PRETRAIN_PATH: '/home/zxy/.cache/torch/checkpoints/resnet50-19c8e357.pth'
   ID_LOSS_TYPE: 'cosface' #{'softmax', 'cosface', 'circle'}
   METRIC_LOSS_TYPE: 'triplet'
+  POOLING: 'avg'
+  MEMORY_BANK: False
 
 INPUT:
-  AUGMIX_PROB: 0.5
-  AUTOAUG_PROB: 0.5
-  COLORJIT_PROB: 0.5
-  RE_PROB: 0.5
+  AUGMIX_PROB: 0.0
+  AUTOAUG_PROB: 0.0
+  COLORJIT_PROB: 0.0
+  RE_PROB: 0.0
 
 DATASETS:
   ROOT_DIR: ''
@@ -15,7 +18,7 @@ DATASETS:
   TEST: ('',)
 
 DATALOADER:
-  SAMPLER: 'balanced_identity' #{'random_identity', 'balanced_identity', 'random'}
+  SAMPLER: 'random_identity' #{'random_identity', 'balanced_identity', 'random'}
   NUM_INSTANCE: 16
 
 SOLVER:
@@ -27,4 +30,4 @@ SOLVER:
   COSINE_MARGIN: 0.35
   COSINE_SCALE: 30
 
-  EVAL_PERIOD: 10
+  EVAL_PERIOD: 5

@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 import numpy as np
 import torch
+import faiss
 import os
 from .evaluation import eval_func
 
@@ -119,11 +120,21 @@ def post_processor(cfg, batch, num_query):
         distmat = re_ranking(qf, gf, cfg.TEST.RERANK_PARAM[0],
                              cfg.TEST.RERANK_PARAM[1], cfg.TEST.RERANK_PARAM[2],
                              cam_dist)
+        indices = np.argsort(distmat, axis=1)
     else:
         distmat = 2 - 2 * torch.mm(qf, gf.t())
         distmat = distmat.cpu().numpy()
+        indices = np.argsort(distmat, axis=1)
 
-    indices = np.argsort(distmat, axis=1)
+        # res = faiss.StandardGpuResources()
+        # index = faiss.GpuIndexFlatIP(res, gf.shape[-1])
+        # index.add(gf.cpu().numpy())
+        # top_k = 1024
+        # sim_mat, indices = index.search(qf.cpu().numpy(), top_k)
+
+    if cfg.TEST.WRITE_FEAT:
+        np.save(os.path.dirname(cfg.TEST.WEIGHT) + '/feats', feats.cpu().numpy())
+        np.save(os.path.dirname(cfg.TEST.WEIGHT) + '/distmat', distmat)
 
     cmc, mAP = eval_func(indices, q_pids, g_pids, q_camids, g_camids)
 

@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import torch
+import numpy as np
 
 from torch.backends import cudnn
 
@@ -16,7 +17,7 @@ from lib.post_processing import post_processor
 
 
 def inference(cfg, logger):
-    testset = 'personx'
+    testset = cfg.DATASETS.TEST[0]
     dataset = init_dataset(testset, root=cfg.DATASETS.ROOT_DIR)
     dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
     test_loader = get_test_loader(dataset.query + dataset.gallery, cfg)
@@ -34,6 +35,10 @@ def inference(cfg, logger):
             data, pid, camid, img_path = batch
             data = data.cuda()
             feat = model(data)
+            if cfg.TEST.FLIP_TEST:
+                data_flip = data.flip(dims=[3])  # NCHW
+                feat_flip = model(data_flip)
+                feat = (feat + feat_flip) / 2
             feats.append(feat)
             pids.extend(pid)
             camids.extend(camid)

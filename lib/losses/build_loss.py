@@ -1,3 +1,4 @@
+import torch
 from .id_loss import CrossEntropyLabelSmooth
 from .metric_loss import TripletLoss, CircleLoss
 
@@ -11,7 +12,7 @@ def build_loss_fn(cfg, num_classes):
     if cfg.MODEL.METRIC_LOSS_TYPE == 'triplet':
         metric_loss_fn = TripletLoss(margin=0.0)
     elif cfg.MODEL.METRIC_LOSS_TYPE == 'circle':
-        metric_loss_fn = CircleLoss()
+        metric_loss_fn = CircleLoss(m=cfg.MODEL.MEMORY_MARGIN, s=cfg.MODEL.MEMORY_SCALE)
     else:
         def metric_loss_fn(feat, target, memory_feat, memory_target):
             return 0

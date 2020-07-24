@@ -122,32 +122,37 @@ class TripletLoss(object):
 
 
 class CircleLoss(nn.Module):
-    def __init__(self, m=0.25, s=128):
+    def __init__(self, m=0.25, s=64):
         super(CircleLoss, self).__init__()
         self.m = m
         self.s = s
         self.soft_plus = nn.Softplus()
 
     def forward(self, batch_feat, batch_labels, memory_feat, memory_labels):
-        distmat = 2 - 2 * torch.mm(memory_feat, batch_feat.t())
-        distmat = distmat.t()
 
-        N, M = distmat.shape
-        is_pos = batch_labels.unsqueeze(dim=-1).expand(N, M).eq(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
-        is_neg = batch_labels.unsqueeze(dim=-1).expand(N, M).ne(memory_labels.unsqueeze(dim=-1).expand(M, N).t())
+        sim_mat = torch.mm(batch_feat, memory_feat.t())
 
+        N, M = sim_mat.size()
 
-        s_p = distmat[is_pos].contiguous().view(N, -1)
-        s_n = distmat[is_neg].contiguous().view(N, -1)
+        is_pos = batch_labels.view(N, 1).expand(N, M).eq(memory_labels.expand(N, M)).float()
+        same_indx = torch.eye(N, N, device='cuda')
+        remain_indx = torch.zeros(N, M-N, device='cuda')
+        same_indx = torch.cat((same_indx, remain_indx), dim=1)
+        is_pos = is_pos - same_indx
 
-        alpha_p = F.relu(-s_p.detach() + 1 + self.m)
-        alpha_n = F.relu(s_n.detach() + self.m)
+        is_neg = batch_labels.view(N, 1).expand(N, M).ne(memory_labels.expand(N, M)).float()
+
+        s_p = sim_mat * is_pos
+        s_n = sim_mat * is_neg
+
+        alpha_p = torch.clamp_min(-s_p.detach() + 1 + self.m, min=0.)
+        alpha_n = torch.clamp_min(s_n.detach() + self.m, min=0.)
         delta_p = 1 - self.m
         delta_n = self.m
 
-        logit_p = - self.s * alpha_p * (s_p - delta_p)
+        logit_p = -self.s * alpha_p * (s_p - delta_p)
         logit_n = self.s * alpha_n * (s_n - delta_n)
 
-        loss = self.soft_plus(torch.logsumexp(logit_n, dim=1) + torch.logsumexp(logit_p, dim=1)).mean()
+        loss = nn.functional.softplus(torch.logsumexp(logit_p, dim=1) + torch.logsumexp(logit_n, dim=1)).mean()
 
         return loss

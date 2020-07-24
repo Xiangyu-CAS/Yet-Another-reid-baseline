@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import time
 import os
@@ -8,10 +9,11 @@ import faiss
 
 from lib.modeling.build_model import Encoder, Head
 from lib.dataset.data_loader import get_train_loader, get_test_loader
-from lib.utils import AverageMeter, load_checkpoint
+from lib.utils import AverageMeter, load_checkpoint, freeze_module
 from lib.evaluation import eval_func
 from lib.losses.build_loss import build_loss_fn
 from lib.memory_bank import VanillaMemoryBank, MoCo
+from lib.modeling.dsbn import convert_dsbn
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -26,7 +28,7 @@ except ImportError:
 class Trainer(object):
     def __init__(self, cfg):
         self.encoder = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
-                               cfg.MODEL.PRETRAIN_CHOICE).cuda()
+                               cfg.MODEL.PRETRAIN_CHOICE, cfg.MODEL.POOLING).cuda()
         self.cfg = cfg
 
         if cfg.MODEL.PRETRAIN_CHOICE == 'self':
@@ -37,13 +39,14 @@ class Trainer(object):
         self.use_memory_bank = False
         if cfg.MODEL.MEMORY_BANK:
             self.encoder_ema = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
-                                       cfg.MODEL.PRETRAIN_CHOICE).cuda()
+                                       cfg.MODEL.PRETRAIN_CHOICE, cfg.MODEL.POOLING).cuda()
             for param_q, param_k in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
                 param_k.requires_grad = False  # not update by gradient
                 param_k.data.copy_(param_q.data)
 
-            self.memory_bank = VanillaMemoryBank()
-            #self.memory_bank = MoCo()
+            #self.memory_bank = VanillaMemoryBank()
+            self.memory_bank = MoCo(dim=self.encoder.in_planes, K=cfg.MODEL.MEMORY_SIZE,
+                                    m=cfg.MODEL.MEMORY_MARGIN, s=cfg.MODEL.MEMORY_SCALE)
             self.use_memory_bank = True
 
     def do_train(self, dataset):
@@ -75,7 +78,7 @@ class Trainer(object):
             scheduler.step(epoch)
 
             # validation
-            if epoch % 2 == 0 or epoch == self.cfg.SOLVER.MAX_EPOCHS - 1:
+            if epoch % self.cfg.SOLVER.EVAL_PERIOD == 0 or epoch == self.cfg.SOLVER.MAX_EPOCHS - 1:
                 cur_mAP = self.validate(model, test_loader, len(dataset.query))
                 if cur_mAP > self.best_mAP:
                     self.best_mAP = cur_mAP
@@ -96,10 +99,8 @@ class Trainer(object):
             self.logger.info("open encoder training")
             self.open_encoder()
 
-        # if self.cfg.MODEL.PRETRAIN_CHOICE == 'finetune':
-        #     for name, module in self.encoder.named_children():
-        #         for p in module.parameters():
-        #             p.requires_grad = False
+        if self.cfg.MODEL.PRETRAIN_CHOICE == 'finetune':
+            freeze_module(model)
 
         start = time.time()
         data_start = time.time()
@@ -116,18 +117,18 @@ class Trainer(object):
 
             if self.use_memory_bank:
                 with torch.no_grad():
-                    #self._momentum_update_ema_encoder()
-                    #feat_ema = self.encoder_ema(input)
-                    #feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
-                    feat_ema = feat
-                    self.memory_bank.enqueue_dequeue(feat_ema.detach(), target.detach())
+                    self._momentum_update_ema_encoder()
+                    feat_ema = self.encoder_ema(input)
+                    feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
 
                 #loss_memory = self.memory_bank(feat, feat_ema, target)
+                memory_loss = self.memory_bank(feat, feat_ema, target)
 
-                memory_feat, memory_target = self.memory_bank.get()
-                id_loss, metric_loss = loss_fn(score, feat, target, memory_feat, memory_target)
-                #metric_loss = loss_memory
-                loss = id_loss + metric_loss
+                #memory_feat, memory_target = self.memory_bank.get()
+                #id_loss, metric_loss = loss_fn(score, feat, target, memory_feat, memory_target)
+                id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
+                #metric_loss = memory_loss
+                loss = id_loss + memory_loss
             else:
                 id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
                 loss = id_loss + metric_loss
@@ -140,7 +141,7 @@ class Trainer(object):
                 loss.backward()
             optimizer.step()
             id_losses.update(id_loss.item()), input.size(0)
-            metric_losses.update(metric_loss.item()), input.size(0)
+            metric_losses.update(metric_loss if isinstance(metric_loss, int) else metric_loss.item()), input.size(0)
             model_time.update(time.time() - model_start)
             data_start = time.time()
 
@@ -179,17 +180,18 @@ class Trainer(object):
 
         torch.cuda.empty_cache()
 
-        if feats.size(0) >= 50000: # too large for mm, use faiss
-            res = faiss.StandardGpuResources()
-            index = faiss.GpuIndexFlatIP(res, gf.shape[-1])
-            index.add(gf.cpu().numpy())
-            top_k = 100
-            sim_mat, indices = index.search(qf.cpu().numpy(), top_k)
-        else:
-            # distmat = 2 - 2 * torch.mm(qf, gf.t()) # Euclidean Distance
-            distmat = - torch.mm(qf, gf.t())# Cosine Distance
-            indices = distmat.argsort(dim=1)
-            indices = indices.cpu().numpy()
+        # if True: #feats.size(0) >= 50000: # too large for mm, use faiss
+        #     res = faiss.StandardGpuResources()
+        #     index = faiss.GpuIndexFlatIP(res, gf.shape[-1])
+        #     index.add(gf.cpu().numpy())
+        #     top_k = 100
+        #     sim_mat, indices = index.search(qf.cpu().numpy(), top_k)
+        # else:
+
+        # distmat = 2 - 2 * torch.mm(qf, gf.t()) # Euclidean Distance
+        distmat = - torch.mm(qf, gf.t())# Cosine Distance
+        indices = distmat.argsort(dim=1)
+        indices = indices.cpu().numpy()
 
         cmc, mAP = eval_func(indices, q_pids, g_pids, q_camids, g_camids)
         self.logger.info("Validation Results")
@@ -230,6 +232,6 @@ class Trainer(object):
         """
         Momentum update of the key encoder
         """
-        m = 0.99
+        m = self.cfg.MODEL.EMA_MOMENTUM
         for param_q, param_k in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
             param_k.data = param_k.data * m + param_q.data * (1. - m)

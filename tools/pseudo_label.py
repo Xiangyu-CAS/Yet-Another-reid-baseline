@@ -92,11 +92,12 @@ def compute_jaccard_distance(target_features, k1=20, k2=6, print_flag=True, use_
     original_dist = 2 - 2 * torch.matmul(target_features, target_features.t())
 
     #cam_distmat = np.load('../ReID-simple-baseline/output/visda/ReCam_distmat/validation/feat_distmat.npy')
-    cam_distmat = np.load('../ReID-simple-baseline/output/visda/ReCam_distmat/target_training/feat_distmat.npy')
-    original_dist -= 0.1 * torch.tensor(cam_distmat, device='cuda')
+    #cam_distmat = np.load('../ReID-simple-baseline/output/visda/ReCam_distmat/target_training/feat_distmat.npy')
+    #original_dist -= 0.1 * torch.tensor(cam_distmat, device='cuda')
 
-    initial_rank = torch.argsort(original_dist, dim=1)
-    initial_rank = initial_rank.cpu().numpy()
+    #initial_rank = torch.argsort(original_dist, dim=1)
+    #initial_rank = initial_rank.cpu().numpy()
+    initial_rank = np.argsort(original_dist.cpu().numpy())
 
     # original_dist = original_dist.cpu().numpy()
     original_dist /= 2

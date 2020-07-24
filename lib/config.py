@@ -12,7 +12,13 @@ _C.MODEL.PRETRAIN_PATH = ''
 _C.MODEL.PRETRAIN_CHOICE = 'imagenet'
 _C.MODEL.ID_LOSS_TYPE = 'softmax' #{softmax, Cosface, Circle}
 _C.MODEL.METRIC_LOSS_TYPE = 'none' #{}
+_C.MODEL.POOLING = 'GeM' #{GeM, avg}
+
 _C.MODEL.MEMORY_BANK = False
+_C.MODEL.MEMORY_SIZE = 16384 #
+_C.MODEL.EMA_MOMENTUM = 0.999
+_C.MODEL.MEMORY_MARGIN = 0.25
+_C.MODEL.MEMORY_SCALE = 30
 # -----------------------------------------------------------------------------
 # Input
 # -----------------------------------------------------------------------------
@@ -59,14 +65,17 @@ _C.DATASETS.ROOT_DIR = './data'
 
 _C.DATASETS.TRAIN = ()
 _C.DATASETS.TEST = ()
-
+# Combine train, query, gallery of trainset
+_C.DATASETS.COMBINEALL = False
 #-------------------------------------------------------------------------------
 # Test
 #-------------------------------------------------------------------------------
 _C.TEST = CN()
 _C.TEST.WEIGHT = ''
+_C.TEST.FLIP_TEST = False
 _C.TEST.DO_DBA = False
 _C.TEST.DO_RERANK = False
+_C.TEST.WRITE_FEAT = False
 _C.TEST.RERANK_PARAM = [20, 6, 0.3]
 _C.TEST.CAM_DISTMAT = ''
 
