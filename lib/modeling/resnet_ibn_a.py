@@ -23,6 +23,107 @@ class IBN(nn.Module):
         return out
 
 
+class SELayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+                nn.Linear(channel, int(channel/reduction), bias=False),
+                nn.ReLU(inplace=True),
+                nn.Linear(int(channel/reduction), channel, bias=False),
+                nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y.expand_as(x)
+
+
+class SEBottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, ibn=False, stride=1, downsample=None, reduction=16):
+        super(SEBottleneck, self).__init__()
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        if ibn:
+            self.bn1 = IBN(planes)
+        else:
+            self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
+                               padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes * 4)
+        self.relu = nn.ReLU(inplace=True)
+        self.se = SELayer(planes * 4, reduction)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = self.se(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+class BasicBlock_IBN(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, ibn=False, stride=1, downsample=None):
+        super(BasicBlock_IBN, self).__init__()
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
+                               padding=1, bias=False)
+        if ibn == True:
+            self.bn1 = IBN(planes)
+        else:
+            self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.IN = nn.InstanceNorm2d(planes, affine=True) if ibn == 'b' else None
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        if self.IN is not None:
+            out = self.IN(out)
+        out = self.relu(out)
+
+        return out
+
+
 class Bottleneck_IBN(nn.Module):
     expansion = 4
 
@@ -131,6 +232,15 @@ class ResNet_IBN(nn.Module):
         return x
 
 
+def resnet34_ibn_a(last_stride=1,  **kwargs):
+    """Constructs a ResNet-50 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet_IBN(last_stride, BasicBlock_IBN, [3, 4, 6, 3], **kwargs)
+    return model
+
+
 def resnet50_ibn_a(last_stride=1,  **kwargs):
     """Constructs a ResNet-50 model.
     Args:
@@ -146,4 +256,12 @@ def resnet101_ibn_a(last_stride=1, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet_IBN(last_stride, Bottleneck_IBN, [3, 4, 23, 3], **kwargs)
+    return model
+
+def se_resnet101_ibn_a(last_stride=1):
+    """Constructs a ResNet-101 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet_IBN(last_stride, SEBottleneck,  [3, 4, 23, 3])
     return model

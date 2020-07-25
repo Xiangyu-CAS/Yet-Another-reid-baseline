@@ -3,8 +3,8 @@ import torch
 import torch
 from torch import nn
 from .resnet import resnet50
-from .resnet_ibn_a import resnet50_ibn_a, resnet101_ibn_a
-from .resnet_ibn_a_nl import resnet50_ibn_a_nl
+from .resnet_ibn_a import resnet50_ibn_a, resnet101_ibn_a, se_resnet101_ibn_a, resnet34_ibn_a
+from .resnext_ibn_a import resnext101_ibn_a
 from .resnest import resnest50, resnest101
 from .regnet import regnety_800mf
 from lib.utils import load_checkpoint
@@ -15,10 +15,12 @@ backbone_factory = {
     'resnet50': [resnet50, 2048],
     'resnet50_ibn_a': [resnet50_ibn_a, 2048],
     'resnet101_ibn_a': [resnet101_ibn_a, 2048],
+    'se_resnet101_ibn_a': [se_resnet101_ibn_a, 2048],
+    'resnext101_ibn_a': [resnext101_ibn_a, 2048],
     'resnest50': [resnest50, 2048],
     'resnest101': [resnest101, 2048],
     'regnety_800mf': [regnety_800mf, 768],
-    'resnet50_ibn_a_nl': [resnet50_ibn_a_nl, 2048],
+    'resnet34_ibn_a': [resnet34_ibn_a, 512],
 }
 
 
