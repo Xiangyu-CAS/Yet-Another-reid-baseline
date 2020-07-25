@@ -120,13 +120,16 @@ class Trainer(object):
                     self._momentum_update_ema_encoder()
                     feat_ema = self.encoder_ema(input)
                     feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
+                    self.memory_bank._dequeue_and_enqueue(feat_ema, target)
 
                 #loss_memory = self.memory_bank(feat, feat_ema, target)
-                memory_loss = self.memory_bank(feat, feat_ema, target)
+                #memory_loss = self.memory_bank(feat, feat_ema, target)
 
                 #memory_feat, memory_target = self.memory_bank.get()
                 #id_loss, metric_loss = loss_fn(score, feat, target, memory_feat, memory_target)
-                id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
+                # id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
+                id_loss, metric_loss = loss_fn(score, self.memory_bank.queue.t(), target, feat, target)
+
                 #metric_loss = memory_loss
                 loss = id_loss + memory_loss
             else:
@@ -140,7 +143,7 @@ class Trainer(object):
             else:
                 loss.backward()
             optimizer.step()
-            id_losses.update(id_loss.item()), input.size(0)
+            id_losses.update(id_loss if isinstance(id_loss, int) else id_loss.item()), input.size(0)
             metric_losses.update(metric_loss if isinstance(metric_loss, int) else metric_loss.item()), input.size(0)
             model_time.update(time.time() - model_start)
             data_start = time.time()

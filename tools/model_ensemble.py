@@ -13,6 +13,7 @@ def main():
     distmat_path = ['./output/visda20/0723-search/finetune-50/distmat.npy',
                     './output/visda20/0723-search/finetune-101/distmat.npy',
                     './output/visda20/0723-search/finetune-nest50/distmat.npy',
+                    './output/visda20/0723-search/finetune-senet/distmat.npy',
                     ]
     distmat = []
     for path in distmat_path:

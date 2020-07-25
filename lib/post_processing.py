@@ -6,12 +6,11 @@ import os
 from .evaluation import eval_func
 
 
-def re_ranking(probFea, galFea, k1, k2, lambda_value, cam_dist=None):
+def re_ranking(probFea, galFea, k1=30, k2=6, lambda_value=0.3, cam_dist=None):
     # if feature vector is numpy, you should use 'torch.tensor' transform it to tensor
     query_num = probFea.size(0)
     gallery_num = galFea.size(0)
     all_num = query_num + gallery_num
-
     feat = torch.cat([probFea, galFea])
     print('using GPU to compute original distance')
 
@@ -90,7 +89,7 @@ def re_ranking(probFea, galFea, k1, k2, lambda_value, cam_dist=None):
     return final_dist
 
 
-def DBA(feat, top_k=5):
+def DBA(feat, top_k=10):
     distmat = 2 - 2 * torch.mm(feat, feat.t())
     indices = distmat.argsort(dim=1)
     expanded_feat = (feat[indices[:, :top_k]]).mean(dim=1)

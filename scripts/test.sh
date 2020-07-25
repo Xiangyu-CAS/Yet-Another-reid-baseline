@@ -1,15 +1,19 @@
 #--------------------------------------validation-------------------------------------
 python ./tools/test.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('2')" \
+MODEL.DEVICE_ID "('4')" \
 MODEL.BACKBONE "resnet50_ibn_a" \
 MODEL.PRETRAIN_CHOICE 'self' \
 DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TEST "('market1501',)" \
-TEST.DO_RERANK False \
-TEST.RERANK_PARAM '([30, 6, 0.15])' \
-TEST.FLIP_TEST False \
-TEST.WEIGHT './output/visda20/0725-search/cosface-circle/finetune/best.pth'
+DATASETS.TEST "('personx',)" \
+TEST.DO_RERANK True \
+TEST.RERANK_PARAM '([30, 6, 0.3])' \
+TEST.WEIGHT 'output/visda20/0723-search/finetune-50/best.pth'
+
+
  \
+TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'
+
+
 TEST.CAM_DISTMAT '../ReID-simple-baseline/output/visda/ReCam_distmat/validation/feat_distmat.npy'
 
 TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'

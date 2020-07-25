@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from lib.utils import euclidean_dist
-
+from lib.losses.metric_loss import SmoothAP
 
 class VanillaMemoryBank(object):
     def __init__(self, dim=2048, k=10000):
@@ -64,6 +64,7 @@ class MoCo(nn.Module):
 
         self.register_buffer("queue_label", torch.zeros((1, K), dtype=torch.long, device='cuda'))
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
+
 
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys, targets):
