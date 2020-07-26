@@ -79,13 +79,14 @@ class BalancedIdentitySampler(Sampler):
         self.pids = list(self.index_dic.keys())
         self.num_samples = len(self.pids)
         self.batch_size = batch_size
+        self.num_pid_per_batch = self.batch_size // self.num_instances
 
     def __len__(self):
         return self.num_samples * self.num_instances
 
     def __iter__(self):
         indices = torch.randperm(self.num_samples).tolist()
-        indices = indices[:(len(indices) // self.batch_size) * self.batch_size]
+        indices = indices[:(len(indices) // self.num_pid_per_batch) * self.num_pid_per_batch]
         ret = []
         for i in indices:
             pid = self.pids[i]

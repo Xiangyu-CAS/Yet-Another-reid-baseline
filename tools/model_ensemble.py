@@ -10,10 +10,11 @@ from lib.utils import write_result
 def main():
     dataset = init_dataset('visda20', root='/home/zxy/data/ReID/visda') # {personx, visda20}
 
-    distmat_path = ['./output/visda20/0723-search/finetune-50/distmat.npy',
-                    './output/visda20/0723-search/finetune-101/distmat.npy',
-                    './output/visda20/0723-search/finetune-nest50/distmat.npy',
-                    './output/visda20/0723-search/finetune-senet/distmat.npy',
+    distmat_path = ['./output/visda20/test-ensemble/finetune-50/distmat.npy',
+                    './output/visda20/test-ensemble/finetune-101/distmat.npy',
+                    './output/visda20/test-ensemble/finetune-nest50/distmat.npy',
+                    './output/visda20/test-ensemble/finetune-senet/distmat.npy',
+                    './output/visda20/test-ensemble/finetune-d169/distmat.npy',
                     ]
     distmat = []
     for path in distmat_path:

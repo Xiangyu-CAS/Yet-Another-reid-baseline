@@ -4,7 +4,6 @@ from .visda20_pseudo import VisDA20Pseudo
 from .market1501 import Market1501
 from .msmt17 import MSMT17
 from .dukemtmc import DukeMTMCreID
-from .visda20_testhalf import Visda20_testhalf
 
 factory = {
     'personx': PersonX,
@@ -13,7 +12,6 @@ factory = {
     'market1501': Market1501,
     'msmt17': MSMT17,
     'dukemtmc': DukeMTMCreID,
-    'visda20_testhalf': Visda20_testhalf,
     }
 
 

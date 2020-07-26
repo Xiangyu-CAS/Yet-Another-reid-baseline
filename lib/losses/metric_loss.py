@@ -227,7 +227,7 @@ class SmoothAP(torch.nn.Module):
         self.num_id = num_id
         self.feat_dims = feat_dims
 
-    def forward(self, preds):
+    def forward(self, preds, targets=None, placeholder1=None, placeholder2=None):
         """Forward pass for all input predictions: preds - (batch_size x feat_dims) """
 
 

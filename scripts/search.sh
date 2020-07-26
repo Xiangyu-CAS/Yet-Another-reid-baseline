@@ -59,48 +59,56 @@ OUTPUT_DIR './output/visda20/0726-search/smoothAP/only-smoothAP-finetune'
 
 
 python ./tools/train.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('1')" \
+MODEL.DEVICE_ID "('2')" \
 MODEL.BACKBONE "resnet50_ibn_a" \
 MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
 DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TRAIN "('personx',)" \
-OUTPUT_DIR './output/visda20/0726-search/ema'
+DATASETS.TRAIN "('visda20_pseudo','personx')" \
+SOLVER.MAX_EPOCHS 40 \
+OUTPUT_DIR './output/visda20/0727-search/epoch40'
 
-
+python ./tools/train.py --config_file='configs/visda20.yml' \
+MODEL.DEVICE_ID "('2')" \
+MODEL.BACKBONE "resnet50_ibn_a" \
+MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
+DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
+DATASETS.TRAIN "('visda20_pseudo','personx')" \
+SOLVER.MAX_EPOCHS 40 \
+OUTPUT_DIR './output/visda20/0727-search/triplet-0.3'
 
 python ./tools/train.py --config_file='configs/visda20.yml' \
 MODEL.DEVICE_ID "('3')" \
 MODEL.BACKBONE "resnet50_ibn_a" \
 MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
 DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TRAIN "('personx', 'visda20_pseudo')" \
-MODEL.EMA_MOMENTUM 0.998 \
-OUTPUT_DIR './output/visda20/0726-search/ema-all'
+DATASETS.TRAIN "('visda20_pseudo','personx')" \
+SOLVER.MAX_EPOCHS 40 \
+MODEL.MEMORY_BANK True \
+MODEL.MEMORY_SIZE 32768 \
+OUTPUT_DIR './output/visda20/0727-search/memory-bank-32768'
 
-
-python ./tools/train.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('2')" \
-MODEL.BACKBONE "('densenet169_ibn_a')" \
-MODEL.PRETRAIN_PATH "('/home/zxy/.cache/torch/checkpoints/densenet169_ibn_a.pth')" \
-DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TRAIN "('personx', 'visda20_pseudo',)" \
-OUTPUT_DIR './output/visda20/0726-search/densenet169_ibn_a'
 
 
 python ./tools/train.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('3')" \
-MODEL.BACKBONE "('resnet50_ibn_a')" \
-MODEL.PRETRAIN_PATH "('/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth')" \
+MODEL.DEVICE_ID "('4')" \
+MODEL.BACKBONE "resnet50_ibn_a" \
+MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
 DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TRAIN "('personx', 'visda20_pseudo',)" \
-OUTPUT_DIR './output/visda20/0726-search/fc-bn'
+DATASETS.TRAIN "('visda20_pseudo',)" \
+SOLVER.MAX_EPOCHS 40 \
+MODEL.METRIC_LOSS_TYPE 'smoothAP' \
+OUTPUT_DIR './output/visda20/0727-search-personx/'
+
 
 
 python ./tools/train.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('2')" \
-MODEL.BACKBONE "('resnet50_ibn_a')" \
-MODEL.PRETRAIN_PATH "('/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth')" \
+MODEL.DEVICE_ID "('5')" \
+MODEL.BACKBONE "resnet50_ibn_a" \
+MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
 DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TRAIN "('personx',)" \
-SOLVER.MAX_EPOCHS 30 \
-OUTPUT_DIR './output/visda20/0726-search/fc-bn-personx'
+DATASETS.TRAIN "('visda20_pseudo',)" \
+SOLVER.MAX_EPOCHS 40 \
+MODEL.METRIC_LOSS_TYPE 'none' \
+DATALOADER.SAMPLER 'none' \
+SOLVER.BATCH_SIZE 128 \
+OUTPUT_DIR './output/visda20/0727-search-personx/only-cosface-random-sampler-B128'

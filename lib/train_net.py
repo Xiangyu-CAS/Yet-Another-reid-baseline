@@ -13,7 +13,6 @@ from lib.utils import AverageMeter, load_checkpoint, freeze_module
 from lib.evaluation import eval_func
 from lib.losses.build_loss import build_loss_fn
 from lib.memory_bank import VanillaMemoryBank, MoCo
-from lib.modeling.dsbn import convert_dsbn
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -120,15 +119,14 @@ class Trainer(object):
                     self._momentum_update_ema_encoder()
                     feat_ema = self.encoder_ema(input)
                     feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
-                    self.memory_bank._dequeue_and_enqueue(feat_ema, target)
 
-                #loss_memory = self.memory_bank(feat, feat_ema, target)
-                #memory_loss = self.memory_bank(feat, feat_ema, target)
+
+                memory_loss = self.memory_bank(feat, feat_ema, target)
 
                 #memory_feat, memory_target = self.memory_bank.get()
                 #id_loss, metric_loss = loss_fn(score, feat, target, memory_feat, memory_target)
                 # id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
-                id_loss, metric_loss = loss_fn(score, self.memory_bank.queue.t(), target, feat, target)
+                id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
 
                 #metric_loss = memory_loss
                 loss = id_loss + memory_loss
