@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 from .transforms.augmix import AugMix
 from .transforms.autoaug import ImageNetPolicy
-from lib.sampler import RandomIdentitySampler, BalancedIdentitySampler
+from lib.sampler import *
 from lib.dataset.transforms.transform import *
 
 

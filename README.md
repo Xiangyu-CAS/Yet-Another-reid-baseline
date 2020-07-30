@@ -1,13 +1,16 @@
-## TODO
-- [ ] memory bank
-- [ ] Domain Specific BN
+## What's new
+- [x] circle loss (both classification and pair-wise)
+- [x] memory bank for metric loss
+- [x] Data augmentation: augmix, auto-augmentation
+- [ ] Distributed Training (on going)
 
 
 ## Requirement
 1. pytorch>=1.2.0
 2. yacs
 3. sklearn
-4. [apex](https://github.com/NVIDIA/apex) (optional)
+4. [apex](https://github.com/NVIDIA/apex) (optional but strong recommended, if you don't have apex
+installed, set option SOLVER.FP16=False in training)
 ````
 $ git clone https://github.com/NVIDIA/apex
 $ cd apex

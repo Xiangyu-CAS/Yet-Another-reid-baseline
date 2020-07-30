@@ -10,15 +10,25 @@ _C.MODEL.DEVICE_ID = '0'
 _C.MODEL.BACKBONE = 'resnet50_ibn_a'
 _C.MODEL.PRETRAIN_PATH = ''
 _C.MODEL.PRETRAIN_CHOICE = 'imagenet'
-_C.MODEL.ID_LOSS_TYPE = 'softmax' #{softmax, Cosface, Circle}
-_C.MODEL.METRIC_LOSS_TYPE = 'none' #{}
+
 _C.MODEL.POOLING = 'GeM' #{GeM, avg}
+_C.MODEL.REDUCE = False
+_C.MODEL.REDUCE_DIM = 512
 
 _C.MODEL.MEMORY_BANK = False
-_C.MODEL.MEMORY_SIZE = 16384 #
+_C.MODEL.MEMORY_SIZE = 16384 #4096, 8192, 16384, 32768
 _C.MODEL.EMA_MOMENTUM = 0.999
-_C.MODEL.MEMORY_MARGIN = 0.25
-_C.MODEL.MEMORY_SCALE = 30
+
+_C.MODEL.ID_LOSS_TYPE = 'softmax' #{softmax, Cosface, Circle}
+_C.MODEL.METRIC_LOSS_TYPE = 'none' #{}
+
+# parameters for large margin softmax loss (eg. arcface, cosface, circle loss)
+_C.MODEL.ID_LOSS_MARGIN = 0.35
+_C.MODEL.ID_LOSS_SCALE = 30
+
+# paramters for large margin metric loss (eg. circle loss)
+_C.MODEL.METRIC_LOSS_MARGIN = 0.25
+_C.MODEL.METRIC_LOSS_SCALE = 96
 # -----------------------------------------------------------------------------
 # Input
 # -----------------------------------------------------------------------------
@@ -27,7 +37,6 @@ _C.INPUT.AUGMIX_PROB = 0.0 # augmix
 _C.INPUT.AUTOAUG_PROB = 0.0 # auto augmentation
 _C.INPUT.COLORJIT_PROB = 0.0 # Color jitter
 _C.INPUT.RE_PROB = 0.0#random erase
-_C.INPUT.FIGURE_PROB = 0.0 # random figures
 # -----------------------------------------------------------------------------
 # Solver
 # -----------------------------------------------------------------------------
@@ -39,10 +48,6 @@ _C.SOLVER.MAX_EPOCHS = 20
 _C.SOLVER.BASE_LR = 3.5e-4
 
 _C.SOLVER.FREEZE_EPOCHS = 0
-
-# parameters for large margin softmax loss
-_C.SOLVER.COSINE_MARGIN = 0.35
-_C.SOLVER.COSINE_SCALE = 30
 
 _C.SOLVER.EVAL_PERIOD = 2
 # -----------------------------------------------------------------------------

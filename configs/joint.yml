@@ -4,32 +4,34 @@ MODEL:
   ID_LOSS_TYPE: 'circle' #{'softmax', 'cosface', 'circle'}
   METRIC_LOSS_TYPE: 'triplet'
   POOLING: 'GeM'
+  REDUCE: True
   MEMORY_BANK: False
 
   ID_LOSS_MARGIN: 0.35
   ID_LOSS_SCALE: 64
-
   METRIC_LOSS_MARGIN: 0.25
   METRIC_LOSS_SCALE: 96
 
 INPUT:
   AUGMIX_PROB: 0.5
   COLORJIT_PROB: 0.5
-  AUTOAUG_PROB: 0.0
   RE_PROB: 0.0
+  AUTOAUG_PROB: 0.0
 
 DATASETS:
   ROOT_DIR: ''
   TRAIN: ('',)
   TEST: ('',)
+  COMBINEALL: True
 
 DATALOADER:
   SAMPLER: 'random_identity' #{'random_identity', 'balanced_identity', 'random'}
-  NUM_INSTANCE: 16
+  NUM_INSTANCE: 4
 
 SOLVER:
   FP16: True
   BATCH_SIZE: 64
-  MAX_EPOCHS: 30
+  MAX_EPOCHS: 20
   FREEZE_EPOCHS: 1
-  EVAL_PERIOD: 5
+
+  EVAL_PERIOD: 1

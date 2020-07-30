@@ -1,3 +1,18 @@
+#-------------------1. train model on source domain-----------------------------
+python ./tools/train.py --config_file='configs/visda20.yml' \
+MODEL.DEVICE_ID "('4')" \
+MODEL.BACKBONE "resnet50_ibn_a" \
+MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
+DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
+DATASETS.TRAIN "('personx',)" \
+SOLVER.MAX_EPOCHS 25 \
+INPUT.RE_PROB 0.0 \
+INPUT.AUGMIX_PROB 0.0 \
+INPUT.AUTOAUG_PROB 0.0 \
+INPUT.COLORJIT_PROB 0.0 \
+OUTPUT_DIR './output/visda20_reproduce/0_ablation_no_dataaug'
+
+
 #--------------------train-------------------------------------------------------
 python ./tools/train.py --config_file='configs/visda20.yml' \
 MODEL.DEVICE_ID "('3')" \

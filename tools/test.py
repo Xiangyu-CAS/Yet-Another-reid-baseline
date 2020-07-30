@@ -22,8 +22,7 @@ def inference(cfg, logger):
     dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
     test_loader = get_test_loader(dataset.query + dataset.gallery, cfg)
 
-    model = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
-                    cfg.MODEL.PRETRAIN_CHOICE).cuda()
+    model = Encoder(cfg).cuda()
 
     logger.info("loading model from {}".format(cfg.TEST.WEIGHT))
     load_checkpoint(model, cfg.TEST.WEIGHT)

@@ -98,3 +98,116 @@ class BalancedIdentitySampler(Sampler):
             ret.extend(t)
         return iter(ret)
 
+
+class RandomIdentitySamplerV2(Sampler):
+    '''
+    指定num_instance，对于少于num_instance的id，直接append，对于大于num_instance的id，
+    按照num_instance分组，分批随机append
+    '''
+    def __init__(self, data_source, batch_size, num_instances):
+        self.data_source = data_source
+        self.batch_size = batch_size
+        self.num_instances = num_instances
+        self.num_pids_per_batch = self.batch_size // self.num_instances
+        self.index_dic = defaultdict(list)
+        for index, (_, pid, _) in enumerate(self.data_source):
+            self.index_dic[pid].append(index)
+        self.pids = list(self.index_dic.keys())
+
+        # estimate number of examples in an epoch
+        self.length = len(data_source) // batch_size + 1
+
+    def __iter__(self):
+        ret = []
+        avai_pids = copy.deepcopy(self.pids)
+        index_dic = copy.deepcopy(self.index_dic)
+        while len(avai_pids) > 0:
+            selected_pids = np.random.permutation(avai_pids)
+            for pid in selected_pids:
+                batch_idxs = index_dic[pid][:self.num_instances]
+                ret.extend(batch_idxs)
+                index_dic[pid] = index_dic[pid][self.num_instances:]
+                if len(index_dic[pid]) == 0:
+                    avai_pids.remove(pid)
+        self.length = len(ret)
+        return iter(ret)
+
+    def __len__(self):
+        return self.length
+
+
+class RandomIdentitySamplerV3(Sampler):
+    '''
+    指定num_instance，对于少于num_instance的id，直接append，对于大于num_instance的id，
+    按照num_instance分组，分批随机append
+    '''
+    def __init__(self, data_source, batch_size, num_instances):
+        self.data_source = data_source
+        self.batch_size = batch_size
+        self.num_instances = num_instances
+        self.num_pids_per_batch = self.batch_size // self.num_instances
+        self.index_dic = defaultdict(list)
+        for index, (_, pid, _) in enumerate(self.data_source):
+            self.index_dic[pid].append(index)
+        self.pids = list(self.index_dic.keys())
+
+        # estimate number of examples in an epoch
+        self.length = len(data_source) // batch_size + 1
+
+    def __iter__(self):
+        ret = []
+        pids = np.random.permutation(self.pids)
+        index_dic = copy.deepcopy(self.index_dic)
+
+        for pid in pids:
+            idxs = copy.deepcopy(index_dic[pid])
+            random.shuffle(idxs)
+            ret.extend(idxs)
+
+        self.length = len(ret)
+        return iter(ret)
+
+    def __len__(self):
+        return self.length
+
+
+
+class RandomIdentitySamplerV4(Sampler):
+    '''
+
+    '''
+    def __init__(self, data_source, batch_size, num_instances):
+        self.data_source = data_source
+        self.batch_size = batch_size
+        self.num_instances = num_instances
+        self.num_pids_per_batch = self.batch_size // self.num_instances
+        self.index_dic = defaultdict(list)
+        for index, (_, pid, _) in enumerate(self.data_source):
+            self.index_dic[pid].append(index)
+        self.pids = list(self.index_dic.keys())
+
+        # estimate number of examples in an epoch
+        self.length = len(data_source) // batch_size + 1
+
+    def __iter__(self):
+        ret = []
+        avai_pids = copy.deepcopy(self.pids)
+        index_dic = copy.deepcopy(self.index_dic)
+        section = 500
+        while len(avai_pids) > 0:
+            selected_pids = []
+            for i in range(0, len(avai_pids)//section + 1):
+                selected_pids.extend(np.random.permutation(avai_pids[i*section:(i+1)*section]))
+            for pid in selected_pids:
+                batch_idxs = index_dic[pid][:self.num_instances]
+                if len(batch_idxs) < self.num_instances:
+                    batch_idxs = np.random.choice(batch_idxs, size=self.num_instances, replace=True)
+                ret.extend(batch_idxs)
+                index_dic[pid] = index_dic[pid][self.num_instances:]
+                if len(index_dic[pid]) == 0:
+                    avai_pids.remove(pid)
+        self.length = len(ret)
+        return iter(ret)
+
+    def __len__(self):
+        return self.length

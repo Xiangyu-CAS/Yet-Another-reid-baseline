@@ -5,7 +5,6 @@ import time
 import os
 import numpy as np
 import logging
-import faiss
 
 from lib.modeling.build_model import Encoder, Head
 from lib.dataset.data_loader import get_train_loader, get_test_loader
@@ -25,10 +24,12 @@ except ImportError:
 
 
 class Trainer(object):
-    def __init__(self, cfg):
-        self.encoder = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
-                               cfg.MODEL.PRETRAIN_CHOICE, cfg.MODEL.POOLING).cuda()
+    def __init__(self, cfg, distributed=False, local_rank=0):
+        self.encoder = Encoder(cfg).cuda()
         self.cfg = cfg
+
+        self.distributed = distributed
+        self.local_rank = local_rank
 
         if cfg.MODEL.PRETRAIN_CHOICE == 'self':
             load_checkpoint(self.encoder, cfg.MODEL.PRETRAIN_PATH)
@@ -37,15 +38,13 @@ class Trainer(object):
         self.best_mAP = 0
         self.use_memory_bank = False
         if cfg.MODEL.MEMORY_BANK:
-            self.encoder_ema = Encoder(cfg.MODEL.BACKBONE, cfg.MODEL.PRETRAIN_PATH,
-                                       cfg.MODEL.PRETRAIN_CHOICE, cfg.MODEL.POOLING).cuda()
+            self.encoder_ema = Encoder(cfg).cuda()
             for param_q, param_k in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
                 param_k.requires_grad = False  # not update by gradient
                 param_k.data.copy_(param_q.data)
 
-            #self.memory_bank = VanillaMemoryBank()
-            self.memory_bank = MoCo(dim=self.encoder.in_planes, K=cfg.MODEL.MEMORY_SIZE,
-                                    m=cfg.MODEL.MEMORY_MARGIN, s=cfg.MODEL.MEMORY_SCALE)
+            self.memory_bank = VanillaMemoryBank(self.encoder.in_planes,
+                                                 cfg.MODEL.MEMORY_SIZE)
             self.use_memory_bank = True
 
     def do_train(self, dataset):
@@ -54,16 +53,24 @@ class Trainer(object):
         model = Head(self.encoder, num_class, self.cfg)
         model.cuda()
 
+        world_size = 1
+        if self.distributed:
+            import apex
+            logging.getLogger("using apex synced BN")
+            model = apex.parallel.convert_syncbn_model(model)
+            world_size = torch.distributed.get_world_size()
+
         # optimizer and scheduler
         params = [{"params": [value]} for key, value in model.named_parameters() if value.requires_grad]
-        optimizer = torch.optim.Adam(params, lr=self.cfg.SOLVER.BASE_LR, weight_decay=5e-4)
+        optimizer = torch.optim.Adam(params, lr=self.cfg.SOLVER.BASE_LR * world_size, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(self.cfg.SOLVER.MAX_EPOCHS))
         loss_fn = build_loss_fn(self.cfg, num_class)
-
 
         if self.cfg.SOLVER.FP16:
             logging.getLogger("Using Mix Precision training")
             model, optimizer = amp.initialize(model, optimizer, opt_level='O1')
+        if self.distributed:
+            model = DDP(model, delay_allreduce=True)
 
         # data loader
         train_loader = get_train_loader(dataset.train, self.cfg)
@@ -77,7 +84,7 @@ class Trainer(object):
             scheduler.step(epoch)
 
             # validation
-            if epoch % self.cfg.SOLVER.EVAL_PERIOD == 0 or epoch == self.cfg.SOLVER.MAX_EPOCHS - 1:
+            if self.local_rank == 0 and (epoch % self.cfg.SOLVER.EVAL_PERIOD == 0 or epoch == self.cfg.SOLVER.MAX_EPOCHS - 1):
                 cur_mAP = self.validate(model, test_loader, len(dataset.query))
                 if cur_mAP > self.best_mAP:
                     self.best_mAP = cur_mAP
@@ -119,21 +126,13 @@ class Trainer(object):
                     self._momentum_update_ema_encoder()
                     feat_ema = self.encoder_ema(input)
                     feat_ema = torch.nn.functional.normalize(feat_ema, dim=1, p=2)
-
-
-                memory_loss = self.memory_bank(feat, feat_ema, target)
-
-                #memory_feat, memory_target = self.memory_bank.get()
-                #id_loss, metric_loss = loss_fn(score, feat, target, memory_feat, memory_target)
-                # id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
-                id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
-
-                #metric_loss = memory_loss
-                loss = id_loss + memory_loss
-            else:
-                id_loss, metric_loss = loss_fn(score, feat, target, feat, target)
+                    self.memory_bank.enqueue_dequeue(feat_ema, target)
+                    memory_feat_t, memory_target_t = self.memory_bank.get()
+                id_loss, metric_loss = loss_fn(score, feat, target, memory_feat_t, memory_target_t)
                 loss = id_loss + metric_loss
-            # loss = loss_fn(score, feat, target)
+            else:
+                id_loss, metric_loss = loss_fn(score, feat, target, feat.t(), target.t())
+                loss = id_loss + metric_loss
 
             if self.cfg.SOLVER.FP16:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -143,11 +142,14 @@ class Trainer(object):
             optimizer.step()
             id_losses.update(id_loss if isinstance(id_loss, int) else id_loss.item()), input.size(0)
             metric_losses.update(metric_loss if isinstance(metric_loss, int) else metric_loss.item()), input.size(0)
+
+            torch.cuda.synchronize()
             model_time.update(time.time() - model_start)
             data_start = time.time()
 
-            if iteration % 100 == 0:
-                self.logger.info("Epoch[{}] Iteration[{}/{}] ID Loss: {:.3f}, Metric Loss: {:.3f}, data time: {:.3f}s, model time: {:.3f}s"
+            if iteration % 100 == 0 and self.local_rank == 0:
+                self.logger.info("Epoch[{}] Iteration[{}/{}] ID Loss: {:.3f}, "
+                                 "Metric Loss: {:.3f}, data time: {:.3f}s, model time: {:.3f}s"
                         .format(epoch, iteration, len(train_loader),
                                 id_losses.val, metric_losses.val, data_time.val, model_time.val))
         end = time.time()
@@ -162,7 +164,7 @@ class Trainer(object):
             for batch in test_loader:
                 data, pid, camid, img_path = batch
                 data = data.cuda()
-                feat = model.encoder(data)
+                feat = self.encoder(data)
 
                 feats.append(feat)
                 pids.extend(pid)

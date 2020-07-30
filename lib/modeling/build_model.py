@@ -37,21 +37,28 @@ def build_backbone(name, *args, **kwargs):
 
 
 class Encoder(nn.Module):
-    def __init__(self, backbone_name, model_path, pretrain_choice, pooling='GeM'):
+    def __init__(self, cfg):
         super(Encoder, self).__init__()
-        self.base, self.in_planes = build_backbone(backbone_name)
+        self.base, self.in_planes = build_backbone(cfg.MODEL.BACKBONE)
 
-        if pretrain_choice == 'imagenet':
-            load_checkpoint(self.base, model_path)
+        if cfg.MODEL.PRETRAIN_CHOICE == 'imagenet':
+            load_checkpoint(self.base, cfg.MODEL.PRETRAIN_PATH)
             print('Loading pretrained ImageNet model......')
 
-        if pooling == 'GeM':
+        if cfg.MODEL.POOLING == 'GeM':
             print('using GeM')
             self.gap = GeM()
         else:
             self.gap = nn.AdaptiveAvgPool2d(1)
-
-        self.bottleneck = nn.BatchNorm1d(self.in_planes)
+        if cfg.MODEL.REDUCE:
+            self.bottleneck = nn.Sequential(nn.Linear(self.in_planes, cfg.MODEL.REDUCE_DIM),
+                                           nn.BatchNorm1d(cfg.MODEL.REDUCE_DIM))
+            # self.bottleneck = nn.Sequential(nn.Conv2d(self.in_planes, cfg.MODEL.REDUCE_DIM, 1, 1),
+            #                                 nn.BatchNorm2d(cfg.MODEL.REDUCE_DIM),
+            #                                 nn .PReLU(),)
+            self.in_planes = cfg.MODEL.REDUCE_DIM
+        else:
+            self.bottleneck = nn.BatchNorm1d(self.in_planes)
         self.bottleneck.apply(weights_init_kaiming)
 
     def reset_bn(self):
@@ -72,10 +79,13 @@ class Head(nn.Module):
         self.id_loss_type = cfg.MODEL.ID_LOSS_TYPE
         if self.id_loss_type == 'cosface':
             self.classifier = Cosface(self.encoder.in_planes, num_class,
-                              cfg.SOLVER.COSINE_SCALE, cfg.SOLVER.COSINE_MARGIN)
+                              cfg.MODEL.ID_LOSS_SCALE, cfg.MODEL.ID_LOSS_MARGIN)
+        elif self.id_loss_type == 'arcface':
+            self.classifier = Arcface(self.encoder.in_planes, num_class,
+                                     cfg.MODEL.ID_LOSS_SCALE, cfg.MODEL.ID_LOSS_MARGIN)
         elif self.id_loss_type == 'circle':
             self.classifier = Circle(self.encoder.in_planes, num_class,
-                              cfg.SOLVER.COSINE_SCALE, cfg.SOLVER.COSINE_MARGIN)
+                              cfg.MODEL.ID_LOSS_SCALE, cfg.MODEL.ID_LOSS_MARGIN)
         elif self.id_loss_type == 'cosine':
             self.classifier = CosineSoftmax(self.encoder.in_planes, num_class)
         else:

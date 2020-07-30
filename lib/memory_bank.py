@@ -3,35 +3,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from lib.utils import euclidean_dist
-from lib.losses.metric_loss import SmoothAP
 
-class VanillaMemoryBank(object):
-    def __init__(self, dim=2048, k=10000):
-        self.K = k
-        self.feats = torch.zeros(self.K, dim).cuda()
-        self.targets = torch.zeros(self.K, dtype=torch.long).cuda()
-        self.ptr = 0
 
-    @property
-    def is_full(self):
-        return self.targets[-1].item() != 0
+class VanillaMemoryBank(nn.Module):
+    def __init__(self, dim=2048, K=16384):
+        super(VanillaMemoryBank, self).__init__()
+        self.K = K
+        # transposed feature for efficient matmul
+        self.register_buffer("queue", torch.randn(dim, K, device='cuda'))
+        self.queue = nn.functional.normalize(self.queue, dim=0)
+
+        self.register_buffer("queue_label", torch.zeros((1, K), dtype=torch.long, device='cuda'))
+        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
     def get(self):
-        if self.is_full:
-            return self.feats, self.targets
-        else:
-            return self.feats[:self.ptr], self.targets[:self.ptr]
+        return self.queue, self.queue_label
 
+    @torch.no_grad()
     def enqueue_dequeue(self, feats, targets):
-        q_size = len(targets)
-        if self.ptr + q_size > self.K:
-            self.feats[-q_size:] = feats
-            self.targets[-q_size:] = targets
-            self.ptr = 0
-        else:
-            self.feats[self.ptr: self.ptr + q_size] = feats
-            self.targets[self.ptr: self.ptr + q_size] = targets
-            self.ptr += q_size
+        feats = feats.detach()
+        targets = targets.detach()
+        targets = targets.detach()
+
+        batch_size = feats.shape[0]
+
+        ptr = int(self.queue_ptr)
+        assert self.K % batch_size == 0  # for simplicity
+
+        # replace the keys at ptr (dequeue and enqueue)
+        self.queue[:, ptr:ptr + batch_size] = feats.T
+        self.queue_label[:, ptr:ptr + batch_size] = targets
+        ptr = (ptr + batch_size) % self.K  # move pointer
+
+        self.queue_ptr[0] = ptr
 
 
 """
