@@ -49,6 +49,10 @@ def prepare_multiple_dataset(cfg, logger):
             dataset.train = merge_datasets([dataset.train, cur_dataset.train])
         dataset.relabel_train()
 
+    if cfg.DATASETS.CUTOFF_LONGTAIL:
+        dataset.train = cutoff_longtail(dataset.train, cfg.DATASETS.LONGTAIL_THR)
+        dataset.relabel_train()
+
     # TODO: support multi-joint testset
     cur_dataset = init_dataset(valset[0], root=cfg.DATASETS.ROOT_DIR)
     dataset.query = cur_dataset.query
@@ -57,3 +61,19 @@ def prepare_multiple_dataset(cfg, logger):
     dataset.print_dataset_statistics(dataset.train, dataset.query, dataset.gallery, logger)
     return dataset
 
+
+def cutoff_longtail(dataset, thr):
+    labels = {}
+    for img_path, pid, camid in dataset:
+        if pid in labels:
+            labels[pid].append([img_path, pid, camid])
+        else:
+            labels[pid] = [[img_path, pid, camid]]
+    keep_data = []
+    remove_data = []
+    for key, value in labels.items():
+        if len(value) < thr:
+            remove_data.extend(value)
+            continue
+        keep_data.extend(value)
+    return keep_data

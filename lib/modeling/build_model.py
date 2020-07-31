@@ -53,9 +53,6 @@ class Encoder(nn.Module):
         if cfg.MODEL.REDUCE:
             self.bottleneck = nn.Sequential(nn.Linear(self.in_planes, cfg.MODEL.REDUCE_DIM),
                                            nn.BatchNorm1d(cfg.MODEL.REDUCE_DIM))
-            # self.bottleneck = nn.Sequential(nn.Conv2d(self.in_planes, cfg.MODEL.REDUCE_DIM, 1, 1),
-            #                                 nn.BatchNorm2d(cfg.MODEL.REDUCE_DIM),
-            #                                 nn .PReLU(),)
             self.in_planes = cfg.MODEL.REDUCE_DIM
         else:
             self.bottleneck = nn.BatchNorm1d(self.in_planes)

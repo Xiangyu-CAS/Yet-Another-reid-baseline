@@ -1,9 +1,9 @@
 ## What's new
+- [ ] mix precision training (pytorch 1.6)
 - [x] circle loss (both classification and pair-wise)
 - [x] memory bank for metric loss
 - [x] Data augmentation: augmix, auto-augmentation
 - [ ] Distributed Training (on going)
-
 
 ## Requirement
 1. pytorch>=1.2.0

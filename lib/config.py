@@ -72,6 +72,9 @@ _C.DATASETS.TRAIN = ()
 _C.DATASETS.TEST = ()
 # Combine train, query, gallery of trainset
 _C.DATASETS.COMBINEALL = False
+
+_C.DATASETS.CUTOFF_LONGTAIL = False
+_C.DATASETS.LONGTAIL_THR = 4
 #-------------------------------------------------------------------------------
 # Test
 #-------------------------------------------------------------------------------

@@ -118,19 +118,34 @@ class RandomIdentitySamplerV2(Sampler):
         self.length = len(data_source) // batch_size + 1
 
     def __iter__(self):
-        ret = []
+        batch_idxs_dict = defaultdict(list)
+
+        for pid in self.pids:
+            idxs = copy.deepcopy(self.index_dic[pid])
+            random.shuffle(idxs)
+            batch_idxs = []
+            if len(idxs) < self.num_instances:
+                batch_idxs_dict[pid].append(idxs)
+            else:
+                for idx in idxs:
+                    batch_idxs.append(idx)
+                    if len(batch_idxs) == self.num_instances:
+                        batch_idxs_dict[pid].append(batch_idxs)
+                        batch_idxs = []
+
         avai_pids = copy.deepcopy(self.pids)
-        index_dic = copy.deepcopy(self.index_dic)
-        while len(avai_pids) > 0:
-            selected_pids = np.random.permutation(avai_pids)
+        final_idxs = []
+
+        while len(avai_pids) >= self.num_pids_per_batch:
+            selected_pids = random.sample(avai_pids, self.num_pids_per_batch)
             for pid in selected_pids:
-                batch_idxs = index_dic[pid][:self.num_instances]
-                ret.extend(batch_idxs)
-                index_dic[pid] = index_dic[pid][self.num_instances:]
-                if len(index_dic[pid]) == 0:
+                batch_idxs = batch_idxs_dict[pid].pop(0)
+                final_idxs.extend(batch_idxs)
+                if len(batch_idxs_dict[pid]) == 0:
                     avai_pids.remove(pid)
-        self.length = len(ret)
-        return iter(ret)
+
+        self.length = len(final_idxs)
+        return iter(final_idxs)
 
     def __len__(self):
         return self.length

@@ -19,7 +19,6 @@ class TripletLoss(object):
 
     def __call__(self, feat1, label1, feat2_t, label2_t):
         distmat = 2 - 2 * torch.mm(feat1, feat2_t) # [0, 4]
-        #distmat = euclidean_dist(memory_feat, batch_feat)
 
         N, M = distmat.size()
 
@@ -50,6 +49,7 @@ class CircleLoss(nn.Module):
         N, M = sim_mat.size()
 
         is_pos = label1.view(N, 1).expand(N, M).eq(label2_t.expand(N, M)).float()
+
         same_indx = torch.eye(N, N, device='cuda')
         remain_indx = torch.zeros(N, M - N, device='cuda')
         same_indx = torch.cat((same_indx, remain_indx), dim=1)
