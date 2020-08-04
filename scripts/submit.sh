@@ -10,7 +10,7 @@ TEST.WRITE_FEAT True \
 TEST.FLIP_TEST True \
 TEST.WEIGHT './output/visda20/test-ensemble/finetune-50/best.pth' \
 OUTPUT_DIR './output/visda20/test-ensemble/finetune-50/' \
-TEST.CAM_DISTMAT '../ReID-simple-baseline/output/visda/ReCam_distmat/test/feat_distmat.npy'
+TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'
 
 
 python ./tools/test.py --config_file='configs/visda20.yml' \
@@ -25,7 +25,7 @@ TEST.WRITE_FEAT True \
 TEST.FLIP_TEST True \
 TEST.WEIGHT './output/visda20/test-ensemble/finetune-101/best.pth' \
 OUTPUT_DIR './output/visda20/test-ensemble/finetune-101/' \
-TEST.CAM_DISTMAT '../ReID-simple-baseline/output/visda/ReCam_distmat/test/feat_distmat.npy'
+TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'
 
 
 python ./tools/test.py --config_file='configs/visda20.yml' \
@@ -40,7 +40,7 @@ TEST.WRITE_FEAT True \
 TEST.FLIP_TEST True \
 TEST.WEIGHT './output/visda20/test-ensemble/finetune-nest50/best.pth' \
 OUTPUT_DIR './output/visda20/test-ensemble/finetune-nest50/' \
-TEST.CAM_DISTMAT '../ReID-simple-baseline/output/visda/ReCam_distmat/test/feat_distmat.npy'
+TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'
 
 
 python ./tools/test.py --config_file='configs/visda20.yml' \
@@ -55,7 +55,7 @@ TEST.WRITE_FEAT True \
 TEST.FLIP_TEST True \
 TEST.WEIGHT './output/visda20/test-ensemble/finetune-senet/best.pth' \
 OUTPUT_DIR './output/visda20/test-ensemble/finetune-senet/' \
-TEST.CAM_DISTMAT '../ReID-simple-baseline/output/visda/ReCam_distmat/test/feat_distmat.npy'
+TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'
 
 
 python ./tools/test.py --config_file='configs/visda20.yml' \
@@ -70,7 +70,7 @@ TEST.WRITE_FEAT True \
 TEST.FLIP_TEST True \
 TEST.WEIGHT './output/visda20/test-ensemble/finetune-d169/best.pth' \
 OUTPUT_DIR './output/visda20/test-ensemble/finetune-d169/' \
-TEST.CAM_DISTMAT '../ReID-simple-baseline/output/visda/ReCam_distmat/test/feat_distmat.npy'
+TEST.CAM_DISTMAT './output/visda20/workflow/cam-model/feat_distmat.npy'
 
 
 

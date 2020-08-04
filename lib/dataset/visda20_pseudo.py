@@ -11,12 +11,12 @@ class VisDA20Pseudo(BaseImageDataset):
     personx
     http://ai.bu.edu/visda-2020/
     """
-    dataset_dir = 'visda20'
+    dataset_dir = 'pseudo'
 
     def __init__(self, root='', verbose=True, **kwargs):
         super(VisDA20Pseudo, self).__init__()
         self.dataset_dir = osp.join(root, self.dataset_dir)
-        self.train_dir = osp.join(self.dataset_dir, 'DBSCAN-third') #DBSCAN-second
+        self.train_dir = osp.join(self.dataset_dir, 'DBSCAN-third') #DBSCAN-first #DBSCAN-second
         self.query_dir = osp.join(self.dataset_dir, 'image_query')
         self.gallery_dir = osp.join(self.dataset_dir, 'image_gallery')
 

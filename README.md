@@ -1,5 +1,4 @@
 ## What's new
-- [ ] mix precision training (pytorch 1.6)
 - [x] circle loss (both classification and pair-wise)
 - [x] memory bank for metric loss
 - [x] Data augmentation: augmix, auto-augmentation
@@ -17,39 +16,14 @@ $ cd apex
 $ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
 ````
 
+## Reproduce results on VisDA 2020 Challenge
+Refer to [VISDA20.md](VISDA20.md)
 
-## Reproduce Results
-- train base model on source domain dataset
-````
-python ./tools/train.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('0')" \
-MODEL.BACKBONE "resnet50_ibn_a" \
-MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
-DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-DATASETS.TRAIN "('personx',)" \
-OUTPUT_DIR './output/visda20/workflow/persxon-model'
-````
-- train camera ReID model on target domain dataset
-```
-python ./tools/train_cam.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('0')" \
-MODEL.BACKBONE "resnet50_ibn_a" \
-MODEL.PRETRAIN_PATH '/home/zxy/.cache/torch/checkpoints/r50_ibn_a.pth' \
-DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-SOLVER.MAX_EPOCHS 40 \
-MODEL.METRIC_LOSS_TYPE 'none' \
-DATALOADER.SAMPLER 'none' \
-OUTPUT_DIR './output/visda20/workflow/cam-model'
-```
+leader board
 
-- generate pseudo labels
-```
-python ./tools/pseudo_label.py --config_file='configs/visda20.yml' \
-MODEL.DEVICE_ID "('2')" \
-MODEL.BACKBONE "resnet50_ibn_a" \
-MODEL.PRETRAIN_CHOICE 'self' \
-DATASETS.ROOT_DIR '/home/zxy/data/ReID/visda' \
-TEST.WEIGHT './output/visda20/workflow/personx-model/best.pth' \
-OUTPUT_DIR './output/visda20/cluster/cluster-first'
-
-```
+|team|mAP|rank1|
+|----|---|-----|
+|vimar|76.56%|84.25%|
+|**xiangyu(ours)**|72.39%|83.95%|
+|log|79.05%|83.26%|
+|yxge|74.78%|82.86%|

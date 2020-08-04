@@ -11,7 +11,7 @@ class VisDA20(BaseImageDataset):
     image_train: unlabeled dataset (but with camera ids)
     http://ai.bu.edu/visda-2020/
     """
-    dataset_dir = 'target_training'
+    dataset_dir = 'visda20'
 
     def __init__(self, root='', verbose=True, **kwargs):
         super(VisDA20, self).__init__()
