@@ -19,7 +19,7 @@ $ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--c
 ````
 
 ## Reproduce results on VisDA 2020 Challenge
-Refer to [VISDA20.md](VISDA20.md) and [tech_report]()
+Refer to [VISDA20.md](VISDA20.md) and [tech_report](tech_report.pdf)
 
 - leaderboard (ranged by rank1)
 
