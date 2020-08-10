@@ -26,8 +26,7 @@ Refer to [VISDA20.md](VISDA20.md) and [tech_report](tech_report.pdf)
 |team|mAP|rank1|
 |----|---|-----|
 |vimar|76.56%|84.25%|
-|**xiangyu(ours)**|72.39%|83.95%|
-|log|79.05%|83.26%|
+|**xiangyu(ours)**|72.39%|83.85%|
 |yxge|74.78%|82.86%|
 
 - Ablation on validation set
