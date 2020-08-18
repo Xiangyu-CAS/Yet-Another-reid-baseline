@@ -1,10 +1,10 @@
 The repo contains our code for VisDA 2020 challenge
 
 ## What's new
+- [x] practice post-process: remove camera bias
 - [x] circle loss (both classification and pair-wise)
 - [x] memory bank for metric loss
-- [x] Data augmentation: augmix, auto-augmentation
-- [ ] Distributed Training (on going)
+- [x] Advanced Data augmentation: augmix, auto-augmentation
 
 ## Requirement
 1. pytorch>=1.2.0
@@ -37,5 +37,5 @@ Refer to [VISDA20.md](VISDA20.md) and [tech_report](tech_report.pdf)
 |+pseudo label|51.8%|77.7%|
 |+BN finetune|55.5%|81.4%|
 |+re-rank|73.4%|80.9%|
-|+remove camera bias|79.5%|89.1%|
+|**+remove camera bias**|**79.5%**|**89.1%**|
 |ensemble|82.7%|90.7%|
